@@ -6,6 +6,8 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './shared/services/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { AssociationsModule } from './modules/associations/associations.module';
+import { MembersModule } from './modules/members/members.module';
 import { JwtAuthGuard } from './shared/guards/jwt-auth.guard';
 
 @Module({
@@ -29,8 +31,8 @@ import { JwtAuthGuard } from './shared/guards/jwt-auth.guard';
 
     // Feature modules
     AuthModule,
-    // AssociationsModule,
-    // MembersModule,
+    AssociationsModule,
+    MembersModule,
     // etc.
   ],
   controllers: [AppController],
