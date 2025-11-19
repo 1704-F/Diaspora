@@ -10,7 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '@/shared/services/prisma.service';
 import { RegisterDto, LoginDto, ForgotPasswordDto, ResetPasswordDto } from './dto';
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash } from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -37,7 +37,8 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(registerDto.password, 10);
 
     // Generate email verification token
-    const emailVerificationToken = randomBytes(32).toString('hex');
+    const plainToken = randomBytes(32).toString('hex');
+    const hashedToken = createHash('sha256').update(plainToken).digest('hex');
 
     // Create user
     const user = await this.prisma.user.create({
@@ -48,7 +49,7 @@ export class AuthService {
         lastName: registerDto.lastName,
         phone: registerDto.phone,
         language: registerDto.language || 'fr',
-        emailVerificationToken,
+        emailVerificationToken: hashedToken, // Store hashed token
       },
       select: {
         id: true,
@@ -61,12 +62,14 @@ export class AuthService {
       },
     });
 
-    // TODO: Send verification email
-    // await this.emailService.sendVerificationEmail(user.email, emailVerificationToken);
+    // TODO: Send verification email with plainToken (not hashedToken!)
+    // await this.emailService.sendVerificationEmail(user.email, plainToken);
 
     return {
       message: 'User registered successfully. Please verify your email.',
       user,
+      // DEVELOPMENT ONLY: Return plain token for testing
+      ...(process.env.NODE_ENV === 'development' && { verificationToken: plainToken }),
     };
   }
 
@@ -130,8 +133,11 @@ export class AuthService {
    * Verify email
    */
   async verifyEmail(token: string) {
+    // Hash the received token to compare with DB
+    const hashedToken = createHash('sha256').update(token).digest('hex');
+
     const user = await this.prisma.user.findFirst({
-      where: { emailVerificationToken: token },
+      where: { emailVerificationToken: hashedToken },
     });
 
     if (!user) {
@@ -167,30 +173,40 @@ export class AuthService {
     }
 
     // Generate reset token
-    const resetToken = randomBytes(32).toString('hex');
+    const plainToken = randomBytes(32).toString('hex');
+    const hashedToken = createHash('sha256').update(plainToken).digest('hex');
     const resetExpires = new Date(Date.now() + 3600000); // 1 hour
 
     await this.prisma.user.update({
       where: { id: user.id },
       data: {
-        passwordResetToken: resetToken,
+        passwordResetToken: hashedToken, // Store hashed token
         passwordResetExpires: resetExpires,
       },
     });
 
-    // TODO: Send reset email
-    // await this.emailService.sendPasswordResetEmail(user.email, resetToken);
+    // TODO: Send reset email with plainToken (not hashedToken!)
+    // await this.emailService.sendPasswordResetEmail(user.email, plainToken);
 
-    return { message: 'If the email exists, a password reset link has been sent' };
+    return {
+      message: 'If the email exists, a password reset link has been sent',
+      // DEVELOPMENT ONLY: Return plain token for testing
+      ...(process.env.NODE_ENV === 'development' && { resetToken: plainToken }),
+    };
   }
 
   /**
    * Reset password with token
    */
   async resetPassword(resetPasswordDto: ResetPasswordDto) {
+    // Hash the received token to compare with DB
+    const hashedToken = createHash('sha256')
+      .update(resetPasswordDto.token)
+      .digest('hex');
+
     const user = await this.prisma.user.findFirst({
       where: {
-        passwordResetToken: resetPasswordDto.token,
+        passwordResetToken: hashedToken,
         passwordResetExpires: {
           gt: new Date(),
         },
