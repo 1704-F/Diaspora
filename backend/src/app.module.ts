@@ -8,6 +8,8 @@ import { PrismaModule } from './shared/services/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AssociationsModule } from './modules/associations/associations.module';
 import { MembersModule } from './modules/members/members.module';
+import { ContributionsModule } from './modules/contributions/contributions.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 import { JwtAuthGuard } from './shared/guards/jwt-auth.guard';
 
 @Module({
@@ -33,6 +35,8 @@ import { JwtAuthGuard } from './shared/guards/jwt-auth.guard';
     AuthModule,
     AssociationsModule,
     MembersModule,
+    ContributionsModule,
+    PaymentsModule,
     // etc.
   ],
   controllers: [AppController],
