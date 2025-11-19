@@ -11,6 +11,7 @@ import { MembersModule } from './modules/members/members.module';
 import { ContributionsModule } from './modules/contributions/contributions.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { ProjectsModule } from './modules/projects/projects.module';
+import { EventsModule } from './modules/events/events.module';
 import { JwtAuthGuard } from './shared/guards/jwt-auth.guard';
 
 @Module({
@@ -39,6 +40,7 @@ import { JwtAuthGuard } from './shared/guards/jwt-auth.guard';
     ContributionsModule,
     PaymentsModule,
     ProjectsModule,
+    EventsModule,
     // etc.
   ],
   controllers: [AppController],
