@@ -25,7 +25,7 @@ export class ProjectsService {
       data: {
         ...createProjectDto,
         tenantId,
-        status: createProjectDto.status || 'PLANNING',
+        status: createProjectDto.status || 'PLANNED',
         currency: createProjectDto.currency || 'EUR',
         startDate: createProjectDto.startDate
           ? new Date(createProjectDto.startDate)
@@ -34,6 +34,7 @@ export class ProjectsService {
           ? new Date(createProjectDto.endDate)
           : undefined,
         metadata: createProjectDto.metadata || {},
+        createdBy: userId,
       },
     });
 
@@ -45,7 +46,7 @@ export class ProjectsService {
         action: 'PROJECT_CREATED',
         entityType: 'Project',
         entityId: project.id,
-        metadata: { projectName: project.name },
+        changes: { projectTitle: project.title },
       },
     });
 
@@ -69,12 +70,9 @@ export class ProjectsService {
     const where: Prisma.ProjectWhereInput = {
       tenantId,
       ...(filters?.status && { status: filters.status as ProjectStatus }),
-      ...(filters?.category && {
-        category: { contains: filters.category, mode: 'insensitive' },
-      }),
       ...(filters?.search && {
         OR: [
-          { name: { contains: filters.search, mode: 'insensitive' } },
+          { title: { contains: filters.search, mode: 'insensitive' } },
           { description: { contains: filters.search, mode: 'insensitive' } },
         ],
       }),
@@ -83,13 +81,6 @@ export class ProjectsService {
     const [projects, total] = await Promise.all([
       this.prisma.project.findMany({
         where,
-        include: {
-          _count: {
-            select: {
-              contributions: true,
-            },
-          },
-        },
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.project.count({ where }),
@@ -111,17 +102,9 @@ export class ProjectsService {
     const project = await this.prisma.project.findUnique({
       where: { id, tenantId },
       include: {
-        contributions: {
-          include: {
-            payments: {
-              where: { status: 'PAID' },
-            },
-          },
-        },
-        _count: {
-          select: {
-            contributions: true,
-          },
+        updates: {
+          orderBy: { createdAt: 'desc' },
+          take: 10,
         },
       },
     });
@@ -173,7 +156,7 @@ export class ProjectsService {
         action: 'PROJECT_UPDATED',
         entityType: 'Project',
         entityId: updated.id,
-        metadata: { projectName: updated.name },
+        changes: { projectTitle: updated.title },
       },
     });
 
@@ -191,7 +174,8 @@ export class ProjectsService {
       include: {
         _count: {
           select: {
-            contributions: true,
+            updates: true,
+            transactions: true,
           },
         },
       },
@@ -201,8 +185,8 @@ export class ProjectsService {
       throw new NotFoundException(`Projet avec l'ID ${id} introuvable`);
     }
 
-    // Si le projet a des cotisations, on le met en statut CANCELLED au lieu de le supprimer
-    if (project._count.contributions > 0) {
+    // Si le projet a des transactions, on le met en statut CANCELLED au lieu de le supprimer
+    if (project._count.transactions > 0) {
       const cancelled = await this.prisma.project.update({
         where: { id },
         data: { status: 'CANCELLED' },
@@ -216,7 +200,7 @@ export class ProjectsService {
           action: 'PROJECT_CANCELLED',
           entityType: 'Project',
           entityId: cancelled.id,
-          metadata: { projectName: cancelled.name },
+          changes: { projectTitle: cancelled.title },
         },
       });
 
@@ -236,7 +220,7 @@ export class ProjectsService {
         action: 'PROJECT_DELETED',
         entityType: 'Project',
         entityId: id,
-        metadata: { projectName: project.name },
+        changes: { projectTitle: project.title },
       },
     });
 
@@ -252,9 +236,9 @@ export class ProjectsService {
     const project = await this.prisma.project.findUnique({
       where: { id, tenantId },
       include: {
-        contributions: {
-          include: {
-            payments: true,
+        transactions: {
+          where: {
+            type: 'EXPENSE',
           },
         },
       },
@@ -264,25 +248,18 @@ export class ProjectsService {
       throw new NotFoundException(`Projet avec l'ID ${id} introuvable`);
     }
 
-    // Calculer les montants collectés
-    let totalCollected = 0;
-    let totalPaid = 0;
-    let totalPending = 0;
+    // Calculer les montants dépensés
+    let totalSpent = 0;
 
-    project.contributions.forEach((contribution) => {
-      contribution.payments.forEach((payment) => {
-        totalCollected += payment.amount;
-        if (payment.status === 'PAID') {
-          totalPaid += payment.amount;
-        } else if (payment.status === 'PENDING') {
-          totalPending += payment.amount;
-        }
-      });
+    project.transactions.forEach((transaction) => {
+      if (transaction.type === 'EXPENSE') {
+        totalSpent += Number(transaction.amount);
+      }
     });
 
     // Calcul du taux de réalisation du budget
-    const budgetRate = project.budget
-      ? (totalPaid / project.budget) * 100
+    const budgetRate = project.budgetAmount
+      ? (totalSpent / Number(project.budgetAmount)) * 100
       : 0;
 
     // Calcul du temps écoulé
@@ -299,28 +276,26 @@ export class ProjectsService {
     return {
       project: {
         id: project.id,
-        name: project.name,
+        title: project.title,
         status: project.status,
-        budget: project.budget,
+        budgetAmount: project.budgetAmount,
         currency: project.currency,
         startDate: project.startDate,
         endDate: project.endDate,
       },
       financial: {
-        budget: project.budget || 0,
-        totalCollected,
-        totalPaid,
-        totalPending,
-        remaining: (project.budget || 0) - totalPaid,
+        budget: Number(project.budgetAmount) || 0,
+        totalSpent,
+        remaining: Number(project.budgetAmount || 0) - totalSpent,
         budgetRate: Math.round(budgetRate * 100) / 100,
       },
-      contributions: {
-        total: project.contributions.length,
-        active: project.contributions.filter((c) => c.isActive).length,
+      transactions: {
+        total: project.transactions.length,
       },
       progress: {
         timeProgress: Math.round(timeProgress * 100) / 100,
         budgetProgress: Math.round(budgetRate * 100) / 100,
+        manualProgress: project.progressPercentage,
         status: project.status,
       },
     };
@@ -358,8 +333,8 @@ export class ProjectsService {
         action: 'PROJECT_STATUS_UPDATED',
         entityType: 'Project',
         entityId: updated.id,
-        metadata: {
-          projectName: updated.name,
+        changes: {
+          projectTitle: updated.title,
           oldStatus: project.status,
           newStatus: status,
         },

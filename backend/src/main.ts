@@ -16,10 +16,6 @@ async function bootstrap() {
       dsn: process.env.SENTRY_DSN,
       environment: process.env.NODE_ENV || 'development',
       tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
-      integrations: [
-        // Automatically instrument Node.js libraries and frameworks
-        ...Sentry.autoDiscoverNodePerformanceMonitoringIntegrations(),
-      ],
     });
     Logger.log('Sentry initialized', 'Bootstrap');
   }
@@ -68,10 +64,8 @@ async function bootstrap() {
   app.useGlobalInterceptors(new LoggingInterceptor());
 
   // Sentry error handler (must be after all other middleware)
-  if (process.env.SENTRY_DSN) {
-    app.use(Sentry.Handlers.requestHandler());
-    app.use(Sentry.Handlers.tracingHandler());
-  }
+  // Note: Sentry.Handlers are not available in newer versions
+  // Error tracking is handled by the SentryExceptionFilter
 
   // Swagger API Documentation
   const config = new DocumentBuilder()
