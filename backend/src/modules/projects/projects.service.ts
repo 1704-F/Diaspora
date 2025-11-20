@@ -23,16 +23,24 @@ export class ProjectsService {
 
     const project = await this.prisma.project.create({
       data: {
-        ...createProjectDto,
         tenantId,
+        title: createProjectDto.title,
+        description: createProjectDto.description,
+        objectives: createProjectDto.objectives,
+        budgetAmount: createProjectDto.budgetAmount,
+        budgetSource: createProjectDto.budgetSource,
+        sectionId: createProjectDto.sectionId,
+        responsibleMemberId: createProjectDto.responsibleMemberId,
+        successIndicators: createProjectDto.successIndicators,
         status: createProjectDto.status || 'PLANNED',
         currency: createProjectDto.currency || 'EUR',
+        progressPercentage: createProjectDto.progressPercentage || 0,
         startDate: createProjectDto.startDate
           ? new Date(createProjectDto.startDate)
-          : undefined,
+          : null,
         endDate: createProjectDto.endDate
           ? new Date(createProjectDto.endDate)
-          : undefined,
+          : null,
         metadata: createProjectDto.metadata || {},
         createdBy: userId,
       },

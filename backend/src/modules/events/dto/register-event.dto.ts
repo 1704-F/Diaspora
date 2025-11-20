@@ -3,11 +3,9 @@ import {
   IsNotEmpty,
   IsOptional,
   IsEnum,
-  IsNumber,
-  Min,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { RegistrationStatus } from '@prisma/client';
+import { ParticipationStatus } from '@prisma/client';
 
 export class RegisterEventDto {
   @ApiProperty({ description: 'ID du membre qui s\'inscrit' })
@@ -16,22 +14,11 @@ export class RegisterEventDto {
   memberId: string;
 
   @ApiPropertyOptional({
-    description: 'Statut de l\'inscription',
-    enum: RegistrationStatus,
-    default: 'PENDING',
+    description: 'Statut de la participation',
+    enum: ParticipationStatus,
+    default: 'INVITED',
   })
-  @IsEnum(RegistrationStatus)
+  @IsEnum(ParticipationStatus)
   @IsOptional()
-  status?: RegistrationStatus;
-
-  @ApiPropertyOptional({ description: 'Nombre de participants', default: 1 })
-  @IsNumber()
-  @Min(1)
-  @IsOptional()
-  numberOfGuests?: number;
-
-  @ApiPropertyOptional({ description: 'Notes ou commentaires' })
-  @IsString()
-  @IsOptional()
-  notes?: string;
+  status?: ParticipationStatus;
 }

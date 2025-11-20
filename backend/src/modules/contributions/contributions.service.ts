@@ -13,7 +13,7 @@ export class ContributionsService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Créer une nouvelle cotisation
+   * Créer un nouveau type de cotisation
    */
   async create(
     tenantId: string,
@@ -23,23 +23,16 @@ export class ContributionsService {
     // Vérifier que l'utilisateur a accès au tenant
     await this.validateTenantAccess(tenantId, userId);
 
-    const contribution = await this.prisma.contribution.create({
+    const contributionType = await this.prisma.contributionType.create({
       data: {
-        ...createContributionDto,
         tenantId,
+        name: createContributionDto.name,
+        description: createContributionDto.description,
+        baseAmount: createContributionDto.amount,
         currency: createContributionDto.currency || 'EUR',
-        isActive: createContributionDto.isActive ?? true,
+        frequency: createContributionDto.frequency,
         isMandatory: createContributionDto.isMandatory ?? false,
-        dueDate: createContributionDto.dueDate
-          ? new Date(createContributionDto.dueDate)
-          : undefined,
-        startDate: createContributionDto.startDate
-          ? new Date(createContributionDto.startDate)
-          : undefined,
-        endDate: createContributionDto.endDate
-          ? new Date(createContributionDto.endDate)
-          : undefined,
-        metadata: createContributionDto.metadata || {},
+        statusMultipliers: createContributionDto.metadata || {},
       },
     });
 
@@ -48,39 +41,35 @@ export class ContributionsService {
       data: {
         tenantId,
         userId,
-        action: 'CONTRIBUTION_CREATED',
-        entityType: 'Contribution',
-        entityId: contribution.id,
-        metadata: { contributionName: contribution.name },
+        action: 'CONTRIBUTION_TYPE_CREATED',
+        entityType: 'ContributionType',
+        entityId: contributionType.id,
+        changes: { contributionTypeName: contributionType.name },
       },
     });
 
-    return contribution;
+    return contributionType;
   }
 
   /**
-   * Récupérer toutes les cotisations d'une association avec filtres
+   * Récupérer tous les types de cotisations d'une association avec filtres
    */
   async findAll(
     tenantId: string,
     userId: string,
     filters?: {
-      isActive?: boolean;
       isMandatory?: boolean;
-      type?: string;
       frequency?: string;
       search?: string;
     },
   ) {
     await this.validateTenantAccess(tenantId, userId);
 
-    const where: Prisma.ContributionWhereInput = {
+    const where: Prisma.ContributionTypeWhereInput = {
       tenantId,
-      ...(filters?.isActive !== undefined && { isActive: filters.isActive }),
       ...(filters?.isMandatory !== undefined && {
         isMandatory: filters.isMandatory,
       }),
-      ...(filters?.type && { type: filters.type as any }),
       ...(filters?.frequency && { frequency: filters.frequency as any }),
       ...(filters?.search && {
         OR: [
@@ -90,23 +79,23 @@ export class ContributionsService {
       }),
     };
 
-    const [contributions, total] = await Promise.all([
-      this.prisma.contribution.findMany({
+    const [contributionTypes, total] = await Promise.all([
+      this.prisma.contributionType.findMany({
         where,
         include: {
           _count: {
             select: {
-              payments: true,
+              contributions: true,
             },
           },
         },
         orderBy: { createdAt: 'desc' },
       }),
-      this.prisma.contribution.count({ where }),
+      this.prisma.contributionType.count({ where }),
     ]);
 
     return {
-      data: contributions,
+      data: contributionTypes,
       total,
       metadata: {
         filters,
@@ -115,15 +104,15 @@ export class ContributionsService {
   }
 
   /**
-   * Récupérer une cotisation par ID
+   * Récupérer un type de cotisation par ID
    */
   async findOne(tenantId: string, id: string, userId: string) {
     await this.validateTenantAccess(tenantId, userId);
 
-    const contribution = await this.prisma.contribution.findUnique({
+    const contributionType = await this.prisma.contributionType.findUnique({
       where: { id, tenantId },
       include: {
-        payments: {
+        contributions: {
           include: {
             member: {
               include: {
@@ -137,29 +126,32 @@ export class ContributionsService {
                 },
               },
             },
+            payments: {
+              where: { status: 'COMPLETED' },
+            },
           },
           orderBy: { createdAt: 'desc' },
           take: 10,
         },
         _count: {
           select: {
-            payments: true,
+            contributions: true,
           },
         },
       },
     });
 
-    if (!contribution) {
+    if (!contributionType) {
       throw new NotFoundException(
-        `Cotisation avec l'ID ${id} introuvable`,
+        `Type de cotisation avec l'ID ${id} introuvable`,
       );
     }
 
-    return contribution;
+    return contributionType;
   }
 
   /**
-   * Mettre à jour une cotisation
+   * Mettre à jour un type de cotisation
    */
   async update(
     tenantId: string,
@@ -169,28 +161,37 @@ export class ContributionsService {
   ) {
     await this.validateTenantAccess(tenantId, userId);
 
-    const contribution = await this.prisma.contribution.findUnique({
+    const contributionType = await this.prisma.contributionType.findUnique({
       where: { id, tenantId },
     });
 
-    if (!contribution) {
+    if (!contributionType) {
       throw new NotFoundException(
-        `Cotisation avec l'ID ${id} introuvable`,
+        `Type de cotisation avec l'ID ${id} introuvable`,
       );
     }
 
-    const updated = await this.prisma.contribution.update({
+    const updated = await this.prisma.contributionType.update({
       where: { id },
       data: {
-        ...updateContributionDto,
-        ...(updateContributionDto.dueDate && {
-          dueDate: new Date(updateContributionDto.dueDate),
+        ...(updateContributionDto.name && { name: updateContributionDto.name }),
+        ...(updateContributionDto.description && {
+          description: updateContributionDto.description,
         }),
-        ...(updateContributionDto.startDate && {
-          startDate: new Date(updateContributionDto.startDate),
+        ...(updateContributionDto.amount && {
+          baseAmount: updateContributionDto.amount,
         }),
-        ...(updateContributionDto.endDate && {
-          endDate: new Date(updateContributionDto.endDate),
+        ...(updateContributionDto.currency && {
+          currency: updateContributionDto.currency,
+        }),
+        ...(updateContributionDto.frequency && {
+          frequency: updateContributionDto.frequency,
+        }),
+        ...(updateContributionDto.isMandatory !== undefined && {
+          isMandatory: updateContributionDto.isMandatory,
+        }),
+        ...(updateContributionDto.metadata && {
+          statusMultipliers: updateContributionDto.metadata,
         }),
       },
     });
@@ -200,10 +201,10 @@ export class ContributionsService {
       data: {
         tenantId,
         userId,
-        action: 'CONTRIBUTION_UPDATED',
-        entityType: 'Contribution',
+        action: 'CONTRIBUTION_TYPE_UPDATED',
+        entityType: 'ContributionType',
         entityId: updated.id,
-        metadata: { contributionName: updated.name },
+        changes: { contributionTypeName: updated.name },
       },
     });
 
@@ -211,24 +212,37 @@ export class ContributionsService {
   }
 
   /**
-   * Supprimer une cotisation (soft delete en désactivant)
+   * Supprimer un type de cotisation
    */
   async remove(tenantId: string, id: string, userId: string) {
     await this.validateTenantAccess(tenantId, userId);
 
-    const contribution = await this.prisma.contribution.findUnique({
+    const contributionType = await this.prisma.contributionType.findUnique({
       where: { id, tenantId },
+      include: {
+        _count: {
+          select: {
+            contributions: true,
+          },
+        },
+      },
     });
 
-    if (!contribution) {
+    if (!contributionType) {
       throw new NotFoundException(
-        `Cotisation avec l'ID ${id} introuvable`,
+        `Type de cotisation avec l'ID ${id} introuvable`,
       );
     }
 
-    const deleted = await this.prisma.contribution.update({
+    // Empêcher la suppression s'il y a des cotisations associées
+    if (contributionType._count.contributions > 0) {
+      throw new BadRequestException(
+        'Impossible de supprimer un type de cotisation avec des cotisations associées',
+      );
+    }
+
+    await this.prisma.contributionType.delete({
       where: { id },
-      data: { isActive: false },
     });
 
     // Audit log
@@ -236,29 +250,38 @@ export class ContributionsService {
       data: {
         tenantId,
         userId,
-        action: 'CONTRIBUTION_DELETED',
-        entityType: 'Contribution',
-        entityId: deleted.id,
-        metadata: { contributionName: deleted.name },
+        action: 'CONTRIBUTION_TYPE_DELETED',
+        entityType: 'ContributionType',
+        entityId: id,
+        changes: { contributionTypeName: contributionType.name },
       },
     });
 
-    return deleted;
+    return { message: 'Type de cotisation supprimé avec succès' };
   }
 
   /**
-   * Obtenir les statistiques d'une cotisation
+   * Obtenir les statistiques d'un type de cotisation
    */
   async getStats(tenantId: string, id: string, userId: string) {
     await this.validateTenantAccess(tenantId, userId);
 
-    const contribution = await this.prisma.contribution.findUnique({
+    const contributionType = await this.prisma.contributionType.findUnique({
       where: { id, tenantId },
+      include: {
+        contributions: {
+          include: {
+            payments: {
+              where: { status: 'COMPLETED' },
+            },
+          },
+        },
+      },
     });
 
-    if (!contribution) {
+    if (!contributionType) {
       throw new NotFoundException(
-        `Cotisation avec l'ID ${id} introuvable`,
+        `Type de cotisation avec l'ID ${id} introuvable`,
       );
     }
 
@@ -270,94 +293,58 @@ export class ContributionsService {
       },
     });
 
-    // Statistiques des paiements
-    const [totalPayments, paidPayments, pendingPayments, overduePayments] =
-      await Promise.all([
-        this.prisma.contributionPayment.count({
-          where: { contributionId: id },
-        }),
-        this.prisma.contributionPayment.count({
-          where: { contributionId: id, status: 'PAID' },
-        }),
-        this.prisma.contributionPayment.count({
-          where: { contributionId: id, status: 'PENDING' },
-        }),
-        this.prisma.contributionPayment.count({
-          where: { contributionId: id, status: 'OVERDUE' },
-        }),
-      ]);
+    // Statistiques des contributions
+    const totalContributions = contributionType.contributions.length;
+    const paidContributions = contributionType.contributions.filter(
+      (c) => c.status === 'PAID',
+    ).length;
+    const pendingContributions = contributionType.contributions.filter(
+      (c) => c.status === 'PENDING',
+    ).length;
+    const overdueContributions = contributionType.contributions.filter(
+      (c) => c.status === 'OVERDUE',
+    ).length;
 
     // Montant total collecté
-    const totalCollected = await this.prisma.contributionPayment.aggregate({
-      where: { contributionId: id, status: 'PAID' },
-      _sum: { amount: true },
+    let totalCollected = 0;
+    contributionType.contributions.forEach((contribution) => {
+      contribution.payments.forEach((payment) => {
+        totalCollected += Number(payment.amount);
+      });
     });
 
     // Montant total attendu
-    const totalExpected = contribution.amount * totalMembers;
+    const totalExpected = Number(contributionType.baseAmount) * totalMembers;
 
     // Taux de conformité
     const complianceRate =
-      totalMembers > 0 ? (paidPayments / totalMembers) * 100 : 0;
-
-    // Membres n'ayant pas payé
-    const membersNotPaid = await this.prisma.member.findMany({
-      where: {
-        tenantId,
-        status: 'ACTIVE',
-        contributionPayments: {
-          none: {
-            contributionId: id,
-            status: 'PAID',
-          },
-        },
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-      },
-      take: 20,
-    });
+      totalMembers > 0 ? (paidContributions / totalMembers) * 100 : 0;
 
     return {
-      contribution: {
-        id: contribution.id,
-        name: contribution.name,
-        amount: contribution.amount,
-        currency: contribution.currency,
-        frequency: contribution.frequency,
-        type: contribution.type,
+      contributionType: {
+        id: contributionType.id,
+        name: contributionType.name,
+        baseAmount: contributionType.baseAmount,
+        currency: contributionType.currency,
+        frequency: contributionType.frequency,
       },
-      payments: {
-        total: totalPayments,
-        paid: paidPayments,
-        pending: pendingPayments,
-        overdue: overduePayments,
+      contributions: {
+        total: totalContributions,
+        paid: paidContributions,
+        pending: pendingContributions,
+        overdue: overdueContributions,
       },
       financial: {
-        totalCollected: totalCollected._sum.amount || 0,
+        totalCollected,
         totalExpected,
-        currency: contribution.currency,
+        currency: contributionType.currency,
       },
       members: {
         total: totalMembers,
-        paid: paidPayments,
-        notPaid: totalMembers - paidPayments,
+        paid: paidContributions,
+        notPaid: totalMembers - paidContributions,
         complianceRate: Math.round(complianceRate * 100) / 100,
       },
-      membersNotPaid: membersNotPaid.map((m) => ({
-        id: m.id,
-        memberNumber: m.memberNumber,
-        firstName: m.user.firstName,
-        lastName: m.user.lastName,
-        email: m.user.email,
-      })),
     };
   }
 
@@ -380,10 +367,10 @@ export class ContributionsService {
     }
 
     const contributions = await this.prisma.contribution.findMany({
-      where: { tenantId, isActive: true },
+      where: { tenantId, memberId },
       include: {
+        contributionType: true,
         payments: {
-          where: { memberId },
           orderBy: { createdAt: 'desc' },
         },
       },
@@ -393,9 +380,9 @@ export class ContributionsService {
     return contributions.map((contribution) => ({
       ...contribution,
       payment: contribution.payments[0] || null,
-      isPaid: contribution.payments.some((p) => p.status === 'PAID'),
-      isPending: contribution.payments.some((p) => p.status === 'PENDING'),
-      isOverdue: contribution.payments.some((p) => p.status === 'OVERDUE'),
+      isPaid: contribution.status === 'PAID',
+      isPending: contribution.status === 'PENDING',
+      isOverdue: contribution.status === 'OVERDUE',
     }));
   }
 

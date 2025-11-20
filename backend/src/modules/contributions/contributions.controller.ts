@@ -45,26 +45,20 @@ export class ContributionsController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Récupérer toutes les cotisations' })
-  @ApiQuery({ name: 'isActive', required: false, type: Boolean })
+  @ApiOperation({ summary: 'Récupérer tous les types de cotisations' })
   @ApiQuery({ name: 'isMandatory', required: false, type: Boolean })
-  @ApiQuery({ name: 'type', required: false, type: String })
   @ApiQuery({ name: 'frequency', required: false, type: String })
   @ApiQuery({ name: 'search', required: false, type: String })
-  @ApiResponse({ status: 200, description: 'Liste des cotisations' })
+  @ApiResponse({ status: 200, description: 'Liste des types de cotisations' })
   findAll(
     @Param('tenantId') tenantId: string,
     @CurrentUser('sub') userId: string,
-    @Query('isActive') isActive?: string,
     @Query('isMandatory') isMandatory?: string,
-    @Query('type') type?: string,
     @Query('frequency') frequency?: string,
     @Query('search') search?: string,
   ) {
     return this.contributionsService.findAll(tenantId, userId, {
-      isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined,
       isMandatory: isMandatory === 'true' ? true : isMandatory === 'false' ? false : undefined,
-      type,
       frequency,
       search,
     });
