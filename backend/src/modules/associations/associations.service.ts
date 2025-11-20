@@ -326,9 +326,16 @@ export class AssociationsService {
     }
 
     // Check if user has permission to update (must be admin/president)
-    const hasPermission = tenant.members[0].roles.some(
-      (mr) => mr.role.slug === 'president' || mr.role.permissions.includes('*'),
-    );
+    const hasPermission = tenant.members[0].roles.some((mr) => {
+      if (mr.role.slug === 'president') return true;
+      if (!mr.role.permissions) return false;
+
+      // permissions is a JsonValue, need to check if it's an array containing '*'
+      if (Array.isArray(mr.role.permissions)) {
+        return mr.role.permissions.includes('*');
+      }
+      return false;
+    });
 
     if (!hasPermission) {
       throw new ForbiddenException('You do not have permission to update this association');
@@ -362,7 +369,7 @@ export class AssociationsService {
         action: 'ASSOCIATION_UPDATED',
         entityType: 'Tenant',
         entityId: id,
-        changes: updateAssociationDto,
+        changes: updateAssociationDto as any,
       },
     });
 
