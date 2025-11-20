@@ -11,6 +11,7 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from '@/shared/services/prisma.service';
 import { RegisterDto, LoginDto, ForgotPasswordDto, ResetPasswordDto } from './dto';
 import { randomBytes, createHash } from 'crypto';
+import { EmailService } from '@/shared/services/email/email.service';
 
 @Injectable()
 export class AuthService {
@@ -18,6 +19,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private emailService: EmailService,
   ) {}
 
   /**
@@ -62,8 +64,17 @@ export class AuthService {
       },
     });
 
-    // TODO: Send verification email with plainToken (not hashedToken!)
-    // await this.emailService.sendVerificationEmail(user.email, plainToken);
+    // Send verification email with plainToken (not hashedToken!)
+    try {
+      await this.emailService.sendEmailVerification(
+        user.email,
+        user.firstName,
+        plainToken,
+      );
+    } catch (error) {
+      // Log error but don't fail registration
+      console.error('Failed to send verification email:', error);
+    }
 
     return {
       message: 'User registered successfully. Please verify your email.',
@@ -156,6 +167,14 @@ export class AuthService {
       },
     });
 
+    // Send welcome email
+    try {
+      await this.emailService.sendWelcomeEmail(user.email, user.firstName);
+    } catch (error) {
+      // Log error but don't fail verification
+      console.error('Failed to send welcome email:', error);
+    }
+
     return { message: 'Email verified successfully' };
   }
 
@@ -185,8 +204,17 @@ export class AuthService {
       },
     });
 
-    // TODO: Send reset email with plainToken (not hashedToken!)
-    // await this.emailService.sendPasswordResetEmail(user.email, plainToken);
+    // Send reset email with plainToken (not hashedToken!)
+    try {
+      await this.emailService.sendPasswordReset(
+        user.email,
+        user.firstName,
+        plainToken,
+      );
+    } catch (error) {
+      // Log error but don't fail the request
+      console.error('Failed to send password reset email:', error);
+    }
 
     return {
       message: 'If the email exists, a password reset link has been sent',

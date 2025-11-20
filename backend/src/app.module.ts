@@ -12,6 +12,8 @@ import { ContributionsModule } from './modules/contributions/contributions.modul
 import { PaymentsModule } from './modules/payments/payments.module';
 import { ProjectsModule } from './modules/projects/projects.module';
 import { EventsModule } from './modules/events/events.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { EmailModule } from './shared/services/email/email.module';
 import { JwtAuthGuard } from './shared/guards/jwt-auth.guard';
 
 @Module({
@@ -32,6 +34,7 @@ import { JwtAuthGuard } from './shared/guards/jwt-auth.guard';
 
     // Global modules
     PrismaModule,
+    EmailModule,
 
     // Feature modules
     AuthModule,
@@ -41,7 +44,7 @@ import { JwtAuthGuard } from './shared/guards/jwt-auth.guard';
     PaymentsModule,
     ProjectsModule,
     EventsModule,
-    // etc.
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [
