@@ -342,7 +342,7 @@ export class MembersService {
         action: 'MEMBER_UPDATED',
         entityType: 'Member',
         entityId: id,
-        changes: updateMemberDto,
+        changes: updateMemberDto as any,
       },
     });
 

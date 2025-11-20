@@ -24,14 +24,19 @@ export class EventsService {
 
     const event = await this.prisma.event.create({
       data: {
-        ...createEventDto,
         tenantId,
+        title: createEventDto.title,
+        description: createEventDto.description,
+        type: createEventDto.type,
         startDate: new Date(createEventDto.startDate),
-        endDate: new Date(createEventDto.endDate),
-        isPublic: createEventDto.isPublic ?? false,
-        requiresRegistration: createEventDto.requiresRegistration ?? true,
-        currency: createEventDto.currency || 'EUR',
-        metadata: createEventDto.metadata || {},
+        endDate: createEventDto.endDate ? new Date(createEventDto.endDate) : null,
+        location: createEventDto.location,
+        isVirtual: createEventDto.isVirtual ?? false,
+        virtualLink: createEventDto.virtualLink,
+        agenda: createEventDto.agenda,
+        preparatoryDocuments: createEventDto.preparatoryDocuments || [],
+        sectionId: createEventDto.sectionId,
+        createdBy: userId,
       },
     });
 
@@ -43,7 +48,7 @@ export class EventsService {
         action: 'EVENT_CREATED',
         entityType: 'Event',
         entityId: event.id,
-        metadata: { eventName: event.name },
+        changes: { eventTitle: event.title },
       },
     });
 
@@ -69,7 +74,7 @@ export class EventsService {
     const where: Prisma.EventWhereInput = {
       tenantId,
       ...(filters?.eventType && {
-        eventType: filters.eventType as EventType,
+        type: filters.eventType as EventType,
       }),
       ...(filters?.upcoming && {
         startDate: { gte: now },
@@ -79,7 +84,7 @@ export class EventsService {
       }),
       ...(filters?.search && {
         OR: [
-          { name: { contains: filters.search, mode: 'insensitive' } },
+          { title: { contains: filters.search, mode: 'insensitive' } },
           { description: { contains: filters.search, mode: 'insensitive' } },
           { location: { contains: filters.search, mode: 'insensitive' } },
         ],
@@ -92,7 +97,7 @@ export class EventsService {
         include: {
           _count: {
             select: {
-              registrations: true,
+              participants: true,
             },
           },
         },
@@ -117,7 +122,7 @@ export class EventsService {
     const event = await this.prisma.event.findUnique({
       where: { id, tenantId },
       include: {
-        registrations: {
+        participants: {
           include: {
             member: {
               include: {
@@ -136,7 +141,7 @@ export class EventsService {
         },
         _count: {
           select: {
-            registrations: true,
+            participants: true,
           },
         },
       },
@@ -189,7 +194,7 @@ export class EventsService {
         action: 'EVENT_UPDATED',
         entityType: 'Event',
         entityId: updated.id,
-        metadata: { eventName: updated.name },
+        changes: { eventTitle: updated.title },
       },
     });
 
@@ -207,7 +212,7 @@ export class EventsService {
       include: {
         _count: {
           select: {
-            registrations: true,
+            participants: true,
           },
         },
       },
@@ -218,9 +223,9 @@ export class EventsService {
     }
 
     // Si l'événement a des inscriptions, empêcher la suppression
-    if (event._count.registrations > 0) {
+    if (event._count.participants > 0) {
       throw new BadRequestException(
-        'Impossible de supprimer un événement avec des inscriptions',
+        'Impossible de supprimer un événement avec des participants',
       );
     }
 
@@ -236,7 +241,7 @@ export class EventsService {
         action: 'EVENT_DELETED',
         entityType: 'Event',
         entityId: id,
-        metadata: { eventName: event.name },
+        changes: { eventTitle: event.title },
       },
     });
 
@@ -257,13 +262,6 @@ export class EventsService {
     // Vérifier que l'événement existe
     const event = await this.prisma.event.findUnique({
       where: { id: eventId, tenantId },
-      include: {
-        _count: {
-          select: {
-            registrations: true,
-          },
-        },
-      },
     });
 
     if (!event) {
@@ -271,10 +269,20 @@ export class EventsService {
     }
 
     // Vérifier que le membre existe
-    const member = await this.prisma.member.findUnique({
+    const member = await this.prisma.member.findFirst({
       where: {
         id: registerEventDto.memberId,
         tenantId,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
       },
     });
 
@@ -283,41 +291,23 @@ export class EventsService {
     }
 
     // Vérifier que le membre n'est pas déjà inscrit
-    const existingRegistration = await this.prisma.eventRegistration.findFirst(
-      {
-        where: {
-          eventId,
-          memberId: registerEventDto.memberId,
-        },
+    const existingRegistration = await this.prisma.eventParticipant.findFirst({
+      where: {
+        eventId,
+        memberId: registerEventDto.memberId,
       },
-    );
+    });
 
     if (existingRegistration) {
       throw new BadRequestException('Le membre est déjà inscrit à cet événement');
     }
 
-    // Vérifier la capacité
-    if (event.maxAttendees) {
-      const confirmedRegistrations = await this.prisma.eventRegistration.count({
-        where: {
-          eventId,
-          status: 'CONFIRMED',
-        },
-      });
-
-      if (confirmedRegistrations >= event.maxAttendees) {
-        throw new BadRequestException('Événement complet');
-      }
-    }
-
     // Créer l'inscription
-    const registration = await this.prisma.eventRegistration.create({
+    const registration = await this.prisma.eventParticipant.create({
       data: {
         eventId,
         memberId: registerEventDto.memberId,
-        status: registerEventDto.status || 'PENDING',
-        numberOfGuests: registerEventDto.numberOfGuests || 1,
-        notes: registerEventDto.notes,
+        status: registerEventDto.status || 'INVITED',
       },
       include: {
         member: {
@@ -342,10 +332,10 @@ export class EventsService {
         tenantId,
         userId,
         action: 'EVENT_REGISTRATION_CREATED',
-        entityType: 'EventRegistration',
+        entityType: 'EventParticipant',
         entityId: registration.id,
-        metadata: {
-          eventName: event.name,
+        changes: {
+          eventTitle: event.title,
           memberName: `${member.user.firstName} ${member.user.lastName}`,
         },
       },
@@ -365,7 +355,7 @@ export class EventsService {
   ) {
     await this.validateTenantAccess(tenantId, userId);
 
-    const registration = await this.prisma.eventRegistration.findUnique({
+    const registration = await this.prisma.eventParticipant.findUnique({
       where: { id: registrationId },
       include: {
         event: true,
@@ -381,9 +371,9 @@ export class EventsService {
       throw new BadRequestException('Inscription ne correspond pas à cet événement');
     }
 
-    const cancelled = await this.prisma.eventRegistration.update({
+    const cancelled = await this.prisma.eventParticipant.update({
       where: { id: registrationId },
-      data: { status: 'CANCELLED' },
+      data: { status: 'DECLINED' },
     });
 
     // Audit log
@@ -392,10 +382,10 @@ export class EventsService {
         tenantId,
         userId,
         action: 'EVENT_REGISTRATION_CANCELLED',
-        entityType: 'EventRegistration',
+        entityType: 'EventParticipant',
         entityId: cancelled.id,
-        metadata: {
-          eventName: registration.event.name,
+        changes: {
+          eventTitle: registration.event.title,
         },
       },
     });
@@ -412,7 +402,7 @@ export class EventsService {
     const event = await this.prisma.event.findUnique({
       where: { id, tenantId },
       include: {
-        registrations: true,
+        participants: true,
       },
     });
 
@@ -420,52 +410,35 @@ export class EventsService {
       throw new NotFoundException(`Événement avec l'ID ${id} introuvable`);
     }
 
-    const totalRegistrations = event.registrations.length;
-    const confirmedRegistrations = event.registrations.filter(
+    const totalRegistrations = event.participants.length;
+    const confirmedRegistrations = event.participants.filter(
       (r) => r.status === 'CONFIRMED',
     ).length;
-    const pendingRegistrations = event.registrations.filter(
-      (r) => r.status === 'PENDING',
+    const invitedRegistrations = event.participants.filter(
+      (r) => r.status === 'INVITED',
     ).length;
-    const cancelledRegistrations = event.registrations.filter(
-      (r) => r.status === 'CANCELLED',
+    const declinedRegistrations = event.participants.filter(
+      (r) => r.status === 'DECLINED',
     ).length;
-
-    const totalGuests = event.registrations.reduce(
-      (sum, r) => sum + (r.numberOfGuests || 1),
-      0,
-    );
-
-    const availableSpots = event.maxAttendees
-      ? event.maxAttendees - confirmedRegistrations
-      : null;
-
-    const attendanceRate = event.maxAttendees
-      ? (confirmedRegistrations / event.maxAttendees) * 100
-      : 0;
+    const attendedRegistrations = event.participants.filter(
+      (r) => r.status === 'ATTENDED',
+    ).length;
 
     return {
       event: {
         id: event.id,
-        name: event.name,
-        eventType: event.eventType,
+        title: event.title,
+        type: event.type,
         startDate: event.startDate,
         endDate: event.endDate,
         location: event.location,
-        maxAttendees: event.maxAttendees,
       },
       registrations: {
         total: totalRegistrations,
         confirmed: confirmedRegistrations,
-        pending: pendingRegistrations,
-        cancelled: cancelledRegistrations,
-        totalGuests,
-      },
-      capacity: {
-        maxAttendees: event.maxAttendees,
-        availableSpots,
-        attendanceRate: Math.round(attendanceRate * 100) / 100,
-        isFull: event.maxAttendees ? confirmedRegistrations >= event.maxAttendees : false,
+        invited: invitedRegistrations,
+        declined: declinedRegistrations,
+        attended: attendedRegistrations,
       },
     };
   }
@@ -488,7 +461,7 @@ export class EventsService {
       throw new NotFoundException('Membre introuvable');
     }
 
-    const registrations = await this.prisma.eventRegistration.findMany({
+    const registrations = await this.prisma.eventParticipant.findMany({
       where: { memberId },
       include: {
         event: true,

@@ -26,7 +26,7 @@ export class PaymentsService {
       throw new Error('STRIPE_SECRET_KEY is not configured');
     }
     this.stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2024-11-20.acacia',
+      apiVersion: '2023-10-16',
     });
   }
 
@@ -70,7 +70,7 @@ export class PaymentsService {
     });
 
     // Créer l'enregistrement de paiement en base
-    const payment = await this.prisma.contributionPayment.create({
+    const payment = await this.prisma.payment.create({
       data: {
         tenantId,
         contributionId: contribution.id,
@@ -78,8 +78,11 @@ export class PaymentsService {
         amount: createPaymentIntentDto.amount / 100, // Convertir de centimes en euros
         currency: createPaymentIntentDto.currency || 'EUR',
         paymentMethod: 'CARD',
+        paymentDate: new Date(),
         status: 'PENDING',
-        stripePaymentIntentId: paymentIntent.id,
+        externalTransactionId: paymentIntent.id,
+        isManual: false,
+        recordedBy: userId,
       },
     });
 
@@ -125,7 +128,7 @@ export class PaymentsService {
     }
 
     // Créer le paiement
-    const payment = await this.prisma.contributionPayment.create({
+    const payment = await this.prisma.payment.create({
       data: {
         tenantId,
         contributionId: createPaymentDto.contributionId,
@@ -133,10 +136,11 @@ export class PaymentsService {
         amount: createPaymentDto.amount,
         currency: createPaymentDto.currency || 'EUR',
         paymentMethod: createPaymentDto.paymentMethod,
-        status: createPaymentDto.status || 'PAID',
+        paymentDate: new Date(),
+        status: 'COMPLETED',
         notes: createPaymentDto.notes,
-        paidAt:
-          createPaymentDto.status === 'PAID' ? new Date() : undefined,
+        isManual: true,
+        recordedBy: userId,
       },
       include: {
         member: {
@@ -161,13 +165,13 @@ export class PaymentsService {
         tenantId,
         userId,
         action: 'PAYMENT_CREATED',
-        entityType: 'ContributionPayment',
+        entityType: 'Payment',
         entityId: payment.id,
-        metadata: {
-          amount: payment.amount,
+        changes: {
+          amount: Number(payment.amount),
           currency: payment.currency,
           paymentMethod: payment.paymentMethod,
-          contributionName: contribution.name,
+          contributionId: contribution.id,
         },
       },
     });
@@ -225,9 +229,9 @@ export class PaymentsService {
    * Gérer le succès d'un Payment Intent
    */
   private async handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent) {
-    const payment = await this.prisma.contributionPayment.findFirst({
+    const payment = await this.prisma.payment.findFirst({
       where: {
-        stripePaymentIntentId: paymentIntent.id,
+        externalTransactionId: paymentIntent.id,
       },
     });
 
@@ -238,11 +242,11 @@ export class PaymentsService {
       return;
     }
 
-    await this.prisma.contributionPayment.update({
+    await this.prisma.payment.update({
       where: { id: payment.id },
       data: {
-        status: 'PAID',
-        paidAt: new Date(),
+        status: 'COMPLETED',
+        paymentDate: new Date(),
       },
     });
 
@@ -251,11 +255,11 @@ export class PaymentsService {
       data: {
         tenantId: payment.tenantId,
         action: 'PAYMENT_SUCCEEDED',
-        entityType: 'ContributionPayment',
+        entityType: 'Payment',
         entityId: payment.id,
-        metadata: {
+        changes: {
           stripePaymentIntentId: paymentIntent.id,
-          amount: payment.amount,
+          amount: Number(payment.amount),
         },
       },
     });
@@ -265,9 +269,9 @@ export class PaymentsService {
    * Gérer l'échec d'un Payment Intent
    */
   private async handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
-    const payment = await this.prisma.contributionPayment.findFirst({
+    const payment = await this.prisma.payment.findFirst({
       where: {
-        stripePaymentIntentId: paymentIntent.id,
+        externalTransactionId: paymentIntent.id,
       },
     });
 
@@ -278,7 +282,7 @@ export class PaymentsService {
       return;
     }
 
-    await this.prisma.contributionPayment.update({
+    await this.prisma.payment.update({
       where: { id: payment.id },
       data: {
         status: 'FAILED',
@@ -290,9 +294,9 @@ export class PaymentsService {
       data: {
         tenantId: payment.tenantId,
         action: 'PAYMENT_FAILED',
-        entityType: 'ContributionPayment',
+        entityType: 'Payment',
         entityId: payment.id,
-        metadata: {
+        changes: {
           stripePaymentIntentId: paymentIntent.id,
           reason: paymentIntent.last_payment_error?.message,
         },
@@ -304,9 +308,9 @@ export class PaymentsService {
    * Gérer un remboursement
    */
   private async handleChargeRefunded(charge: Stripe.Charge) {
-    const payment = await this.prisma.contributionPayment.findFirst({
+    const payment = await this.prisma.payment.findFirst({
       where: {
-        stripePaymentIntentId: charge.payment_intent as string,
+        externalTransactionId: charge.payment_intent as string,
       },
     });
 
@@ -315,7 +319,7 @@ export class PaymentsService {
       return;
     }
 
-    await this.prisma.contributionPayment.update({
+    await this.prisma.payment.update({
       where: { id: payment.id },
       data: {
         status: 'REFUNDED',
@@ -327,9 +331,9 @@ export class PaymentsService {
       data: {
         tenantId: payment.tenantId,
         action: 'PAYMENT_REFUNDED',
-        entityType: 'ContributionPayment',
+        entityType: 'Payment',
         entityId: payment.id,
-        metadata: {
+        changes: {
           chargeId: charge.id,
           amount: charge.amount_refunded / 100,
         },
@@ -365,7 +369,7 @@ export class PaymentsService {
     };
 
     const [payments, total] = await Promise.all([
-      this.prisma.contributionPayment.findMany({
+      this.prisma.payment.findMany({
         where,
         include: {
           contribution: true,
@@ -384,7 +388,7 @@ export class PaymentsService {
         },
         orderBy: { createdAt: 'desc' },
       }),
-      this.prisma.contributionPayment.count({ where }),
+      this.prisma.payment.count({ where }),
     ]);
 
     return {
@@ -400,7 +404,7 @@ export class PaymentsService {
   async findOne(tenantId: string, id: string, userId: string) {
     await this.validateTenantAccess(tenantId, userId);
 
-    const payment = await this.prisma.contributionPayment.findUnique({
+    const payment = await this.prisma.payment.findUnique({
       where: { id, tenantId },
       include: {
         contribution: true,
@@ -437,7 +441,7 @@ export class PaymentsService {
   ) {
     await this.validateTenantAccess(tenantId, userId);
 
-    const payment = await this.prisma.contributionPayment.findUnique({
+    const payment = await this.prisma.payment.findUnique({
       where: { id, tenantId },
     });
 
@@ -445,13 +449,10 @@ export class PaymentsService {
       throw new NotFoundException(`Paiement avec l'ID ${id} introuvable`);
     }
 
-    const updated = await this.prisma.contributionPayment.update({
+    const updated = await this.prisma.payment.update({
       where: { id },
       data: {
         ...updatePaymentDto,
-        ...(updatePaymentDto.status === 'PAID' && !payment.paidAt
-          ? { paidAt: new Date() }
-          : {}),
       },
     });
 
@@ -461,9 +462,9 @@ export class PaymentsService {
         tenantId,
         userId,
         action: 'PAYMENT_UPDATED',
-        entityType: 'ContributionPayment',
+        entityType: 'Payment',
         entityId: updated.id,
-        metadata: {
+        changes: {
           status: updated.status,
         },
       },

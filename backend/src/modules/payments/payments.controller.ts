@@ -82,6 +82,9 @@ export class PaymentsController {
     @Headers('stripe-signature') signature: string,
     @Req() req: RawBodyRequest<Request>,
   ) {
+    if (!req.rawBody) {
+      throw new Error('Raw body is required for Stripe webhooks');
+    }
     return this.paymentsService.handleStripeWebhook(
       signature,
       req.rawBody,
