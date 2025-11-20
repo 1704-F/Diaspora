@@ -7,8 +7,8 @@ import {
 } from '@nestjs/swagger';
 import { DashboardService } from './dashboard.service';
 import { DashboardOverviewDto } from './dto/dashboard-overview.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { CurrentTenant } from '../../shared/decorators/current-tenant.decorator';
+import { JwtAuthGuard } from '@/shared/guards/jwt-auth.guard';
+import { CurrentTenant } from '@/shared/decorators/current-tenant.decorator';
 
 @ApiTags('dashboard')
 @ApiBearerAuth()
