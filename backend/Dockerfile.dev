@@ -3,18 +3,26 @@ FROM node:20-alpine
 # Set working directory
 WORKDIR /app
 
-# Install dependencies
+# Installer OpenSSL, bash et build tools nécessaires pour bcrypt
+RUN apk add --no-cache bash openssl python3 g++ make
+
+# Copier les fichiers de dépendances
 COPY package*.json ./
+
+# Installer les dépendances npm
 RUN npm ci
 
-# Copy source code
+# Rebuild bcrypt pour Linux (APRÈS npm install)
+RUN npm rebuild bcrypt --build-from-source
+
+# Copier le reste du code
 COPY . .
 
-# Generate Prisma Client
+# Générer Prisma Client
 RUN npx prisma generate || true
 
-# Expose port
+# Exposer le port
 EXPOSE 3000
 
-# Start application in development mode
+# Démarrer l'application en mode développement
 CMD ["npm", "run", "start:dev"]
