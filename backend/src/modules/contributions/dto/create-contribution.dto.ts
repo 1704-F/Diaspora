@@ -10,7 +10,7 @@ import {
   Min,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ContributionFrequency, ContributionType } from '@prisma/client';
+import { ContributionFrequency } from '@prisma/client';
 
 export class CreateContributionDto {
   @ApiProperty({ description: 'Nom de la cotisation', example: 'Cotisation annuelle 2024' })
@@ -40,14 +40,6 @@ export class CreateContributionDto {
   })
   @IsEnum(ContributionFrequency)
   frequency: ContributionFrequency;
-
-  @ApiProperty({
-    description: 'Type de cotisation',
-    enum: ContributionType,
-    example: 'MEMBERSHIP_FEE',
-  })
-  @IsEnum(ContributionType)
-  type: ContributionType;
 
   @ApiPropertyOptional({ description: 'Date d\'échéance', example: '2024-12-31' })
   @IsDateString()
