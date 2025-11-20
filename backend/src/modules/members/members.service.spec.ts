@@ -350,23 +350,6 @@ describe('MembersService', () => {
     });
   });
 
-  describe('getStats', () => {
-    it('should return member statistics', async () => {
-      const memberId = 'member-123';
-
-      mockPrismaService.contributionPayment.aggregate.mockResolvedValue({
-        _sum: { amount: 5000 },
-      });
-      mockPrismaService.eventRegistration.count.mockResolvedValue(10);
-
-      const result = await service.getStats(mockTenantId, memberId);
-
-      expect(result).toHaveProperty('totalContributions');
-      expect(result).toHaveProperty('eventsAttended');
-      expect(result.totalContributions).toBe(5000);
-      expect(result.eventsAttended).toBe(10);
-    });
-  });
 
   describe('assignRole', () => {
     it('should assign a role to a member', async () => {

@@ -13,7 +13,8 @@ import {
   MemberStatus,
   ProjectStatus,
   EventStatus,
-  ContributionPaymentStatus,
+  PaymentStatus,
+  ContributionStatus,
 } from '@prisma/client';
 
 @Injectable()
@@ -62,6 +63,12 @@ export class DashboardService {
   }
 
   private async getMemberStats(tenantId: string): Promise<MemberStatsDto> {
+    const firstDayOfMonth = new Date(
+      new Date().getFullYear(),
+      new Date().getMonth(),
+      1,
+    );
+
     const [total, active, inactive, suspended, newThisMonth] =
       await Promise.all([
         this.prisma.member.count({ where: { tenantId } }),
@@ -77,12 +84,8 @@ export class DashboardService {
         this.prisma.member.count({
           where: {
             tenantId,
-            joinedAt: {
-              gte: new Date(
-                new Date().getFullYear(),
-                new Date().getMonth(),
-                1,
-              ),
+            createdAt: {
+              gte: firstDayOfMonth,
             },
           },
         }),
@@ -106,54 +109,62 @@ export class DashboardService {
       1,
     );
 
-    // Get contribution payments
-    const [paidContributions, allContributions, revenueThisMonth] =
-      await Promise.all([
-        this.prisma.contributionPayment.aggregate({
-          where: {
-            contribution: { tenantId },
-            status: ContributionPaymentStatus.PAID,
-          },
-          _sum: { amount: true },
-        }),
-        this.prisma.contributionPayment.aggregate({
-          where: { contribution: { tenantId } },
-          _sum: { amount: true },
-        }),
-        this.prisma.contributionPayment.aggregate({
-          where: {
-            contribution: { tenantId },
-            status: ContributionPaymentStatus.PAID,
-            paidAt: { gte: firstDayOfMonth },
-          },
-          _sum: { amount: true },
-        }),
-      ]);
+    // Get payments (completed)
+    const [paidPayments, allPayments, revenueThisMonth] = await Promise.all([
+      this.prisma.payment.aggregate({
+        where: {
+          tenantId,
+          status: PaymentStatus.COMPLETED,
+        },
+        _sum: { amount: true },
+      }),
+      this.prisma.payment.aggregate({
+        where: { tenantId },
+        _sum: { amount: true },
+      }),
+      this.prisma.payment.aggregate({
+        where: {
+          tenantId,
+          status: PaymentStatus.COMPLETED,
+          paymentDate: { gte: firstDayOfMonth },
+        },
+        _sum: { amount: true },
+      }),
+    ]);
 
-    const contributionsCollected = paidContributions._sum.amount || 0;
-    const contributionsExpected = allContributions._sum.amount || 0;
+    const contributionsCollected = Number(paidPayments._sum.amount || 0);
+    const contributionsExpected = Number(allPayments._sum.amount || 0);
     const complianceRate =
       contributionsExpected > 0
         ? (contributionsCollected / contributionsExpected) * 100
         : 0;
 
-    // For now, using contributions as main revenue source
-    // In a full implementation, you'd have a Transaction/Payment table
     const totalRevenue = contributionsCollected;
-    const revenueMonth = revenueThisMonth._sum.amount || 0;
+    const revenueMonth = Number(revenueThisMonth._sum.amount || 0);
 
-    // Get project spending
-    const projectSpending = await this.prisma.project.aggregate({
-      where: { tenantId },
-      _sum: { actualCost: true },
+    // Get project spending from transactions
+    const projectExpenses = await this.prisma.transaction.aggregate({
+      where: {
+        tenantId,
+        type: 'EXPENSE',
+      },
+      _sum: { amount: true },
     });
 
-    const totalExpenses = projectSpending._sum.actualCost || 0;
+    const totalExpenses = Number(projectExpenses._sum.amount || 0);
     const balance = totalRevenue - totalExpenses;
 
-    // For expenses this month, we'd need a proper transaction table
-    // For now, using 0 as placeholder
-    const expensesThisMonth = 0;
+    // Expenses this month
+    const expensesMonth = await this.prisma.transaction.aggregate({
+      where: {
+        tenantId,
+        type: 'EXPENSE',
+        transactionDate: { gte: firstDayOfMonth },
+      },
+      _sum: { amount: true },
+    });
+
+    const expensesThisMonth = Number(expensesMonth._sum.amount || 0);
 
     return {
       totalRevenue,
@@ -168,9 +179,12 @@ export class DashboardService {
   }
 
   private async getProjectStats(tenantId: string): Promise<ProjectStatsDto> {
-    const [total, inProgress, completed, onHold, budgetData] =
+    const [total, planned, inProgress, completed, cancelled, budgetData, spentData] =
       await Promise.all([
         this.prisma.project.count({ where: { tenantId } }),
+        this.prisma.project.count({
+          where: { tenantId, status: ProjectStatus.PLANNED },
+        }),
         this.prisma.project.count({
           where: { tenantId, status: ProjectStatus.IN_PROGRESS },
         }),
@@ -178,16 +192,24 @@ export class DashboardService {
           where: { tenantId, status: ProjectStatus.COMPLETED },
         }),
         this.prisma.project.count({
-          where: { tenantId, status: ProjectStatus.ON_HOLD },
+          where: { tenantId, status: ProjectStatus.CANCELLED },
         }),
         this.prisma.project.aggregate({
           where: { tenantId },
-          _sum: { budget: true, actualCost: true },
+          _sum: { budgetAmount: true },
+        }),
+        this.prisma.transaction.aggregate({
+          where: {
+            tenantId,
+            type: 'EXPENSE',
+            projectId: { not: null },
+          },
+          _sum: { amount: true },
         }),
       ]);
 
-    const totalBudget = budgetData._sum.budget || 0;
-    const spent = budgetData._sum.actualCost || 0;
+    const totalBudget = Number(budgetData._sum.budgetAmount || 0);
+    const spent = Number(spentData._sum.amount || 0);
     const budgetUsageRate =
       totalBudget > 0 ? (spent / totalBudget) * 100 : 0;
 
@@ -195,7 +217,7 @@ export class DashboardService {
       total,
       inProgress,
       completed,
-      onHold,
+      onHold: planned, // Using PLANNED as equivalent to onHold for backwards compatibility
       totalBudget,
       spent,
       budgetUsageRate: Math.round(budgetUsageRate * 10) / 10,
@@ -205,7 +227,7 @@ export class DashboardService {
   private async getEventStats(tenantId: string): Promise<EventStatsDto> {
     const now = new Date();
 
-    const [total, upcoming, past, cancelled, registrationData] =
+    const [total, upcoming, past, cancelled, participantData] =
       await Promise.all([
         this.prisma.event.count({ where: { tenantId } }),
         this.prisma.event.count({
@@ -219,48 +241,32 @@ export class DashboardService {
           where: {
             tenantId,
             status: EventStatus.COMPLETED,
-            endDate: { lt: now },
           },
         }),
         this.prisma.event.count({
           where: { tenantId, status: EventStatus.CANCELLED },
         }),
-        this.prisma.eventRegistration.aggregate({
+        this.prisma.eventParticipant.aggregate({
           where: { event: { tenantId } },
           _count: { id: true },
-          _sum: { numberOfGuests: true },
         }),
       ]);
 
-    const totalRegistrations = registrationData._count.id || 0;
-    const totalAttendees =
-      totalRegistrations + (registrationData._sum.numberOfGuests || 0);
+    const totalRegistrations = participantData._count.id || 0;
+    const totalAttendees = totalRegistrations;
 
-    // Calculate attendance rate from completed events
-    const completedEventsWithAttendance = await this.prisma.event.findMany({
+    // Calculate attendance rate from confirmed participants
+    const confirmedParticipants = await this.prisma.eventParticipant.count({
       where: {
-        tenantId,
-        status: EventStatus.COMPLETED,
-      },
-      select: {
-        maxAttendees: true,
-        _count: {
-          select: { registrations: true },
-        },
+        event: { tenantId },
+        status: 'CONFIRMED',
       },
     });
 
-    let averageAttendanceRate = 0;
-    if (completedEventsWithAttendance.length > 0) {
-      const rates = completedEventsWithAttendance
-        .filter((e) => e.maxAttendees && e.maxAttendees > 0)
-        .map((e) => (e._count.registrations / e.maxAttendees!) * 100);
-
-      if (rates.length > 0) {
-        averageAttendanceRate =
-          rates.reduce((sum, rate) => sum + rate, 0) / rates.length;
-      }
-    }
+    const averageAttendanceRate =
+      totalRegistrations > 0
+        ? (confirmedParticipants / totalRegistrations) * 100
+        : 0;
 
     return {
       total,
@@ -276,23 +282,23 @@ export class DashboardService {
   private async getContributionStats(
     tenantId: string,
   ): Promise<ContributionStatsDto> {
-    const [totalTypes, payments] = await Promise.all([
-      this.prisma.contribution.count({ where: { tenantId } }),
-      this.prisma.contributionPayment.groupBy({
+    const [totalTypes, contributions] = await Promise.all([
+      this.prisma.contributionType.count({ where: { tenantId } }),
+      this.prisma.contribution.groupBy({
         by: ['status'],
-        where: { contribution: { tenantId } },
+        where: { tenantId },
         _count: { id: true },
       }),
     ]);
 
     const paid =
-      payments.find((p) => p.status === ContributionPaymentStatus.PAID)
-        ?._count.id || 0;
+      contributions.find((c) => c.status === ContributionStatus.PAID)?._count
+        .id || 0;
     const pending =
-      payments.find((p) => p.status === ContributionPaymentStatus.PENDING)
+      contributions.find((c) => c.status === ContributionStatus.PENDING)
         ?._count.id || 0;
     const overdue =
-      payments.find((p) => p.status === ContributionPaymentStatus.OVERDUE)
+      contributions.find((c) => c.status === ContributionStatus.OVERDUE)
         ?._count.id || 0;
 
     const totalPayments = paid + pending + overdue;
@@ -337,13 +343,13 @@ export class DashboardService {
   }
 
   private formatActivityDescription(log: any): string {
-    const entity = log.entity.toLowerCase();
     const action = log.action.toLowerCase();
+    const entityType = log.entityType.toLowerCase();
 
     const actionMap: Record<string, string> = {
-      create: 'created',
-      update: 'updated',
-      delete: 'deleted',
+      created: 'created',
+      updated: 'updated',
+      deleted: 'deleted',
       login: 'logged in',
       logout: 'logged out',
       register: 'registered',
@@ -354,6 +360,6 @@ export class DashboardService {
       ? `${log.user.firstName} ${log.user.lastName}`
       : 'Someone';
 
-    return `${userName} ${actionText} ${entity} ${log.entityId || ''}`.trim();
+    return `${userName} ${actionText} ${entityType} ${log.entityId || ''}`.trim();
   }
 }
