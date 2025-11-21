@@ -8,6 +8,7 @@ import { useAuthStore } from './stores/auth.store';
 import { Layout } from './components/layout/Layout';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
+import { AppsHubPage } from './pages/AppsHub/AppsHubPage';
 import { Dashboard } from './pages/Dashboard';
 import { MembersPage } from './pages/members/MembersPage';
 import { EventsPage } from './pages/events/EventsPage';
@@ -44,7 +45,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 // Public Route Component (redirect to dashboard if already logged in)
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  return !isAuthenticated ? <>{children}</> : <Navigate to="/" replace />;
+  return !isAuthenticated ? <>{children}</> : <Navigate to="/dashboard" replace />;
 };
 
 function App() {
@@ -89,6 +90,14 @@ function App() {
           />
 
           {/* Protected Routes */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <AppsHubPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/"
             element={
