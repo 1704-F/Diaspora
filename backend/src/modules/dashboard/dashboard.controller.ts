@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, UseGuards, Param } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -8,12 +8,12 @@ import {
 import { DashboardService } from './dashboard.service';
 import { DashboardOverviewDto } from './dto/dashboard-overview.dto';
 import { JwtAuthGuard } from '@/shared/guards/jwt-auth.guard';
-import { CurrentTenant } from '@/shared/decorators/current-tenant.decorator';
+import { CurrentUser } from '@/shared/decorators/current-user.decorator';
 
 @ApiTags('dashboard')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('dashboard')
+@Controller('associations/:tenantId/dashboard')
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 
@@ -31,7 +31,8 @@ export class DashboardController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - No tenant access' })
   async getOverview(
-    @CurrentTenant() tenantId: string,
+    @Param('tenantId') tenantId: string,
+    @CurrentUser('sub') userId: string,
   ): Promise<DashboardOverviewDto> {
     return this.dashboardService.getOverview(tenantId);
   }
