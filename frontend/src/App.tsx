@@ -9,6 +9,11 @@ import { Layout } from './components/layout/Layout';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { AppsHubPage } from './pages/AppsHub/AppsHubPage';
+import {
+  AssociationsPage,
+  CreateAssociationPage,
+  SelectAssociationPage,
+} from './pages/Associations';
 import { Dashboard } from './pages/Dashboard';
 import { MembersPage } from './pages/members/MembersPage';
 import { EventsPage } from './pages/events/EventsPage';
@@ -98,6 +103,44 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* Associations Routes */}
+          <Route
+            path="/associations"
+            element={
+              <ProtectedRoute>
+                <AssociationsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/associations/create"
+            element={
+              <ProtectedRoute>
+                <CreateAssociationPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/associations/select"
+            element={
+              <ProtectedRoute>
+                <SelectAssociationPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/associations/:tenantId/dashboard"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Dashboard />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Old routes (to be migrated) */}
           <Route
             path="/"
             element={
