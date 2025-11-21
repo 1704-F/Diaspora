@@ -131,6 +131,7 @@ describe('AuthService', () => {
         password: 'StrongP@ssw0rd123',
         firstName: 'Jane',
         lastName: 'Smith',
+        language: 'fr',
       };
 
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
