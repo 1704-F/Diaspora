@@ -15,7 +15,7 @@ import Stripe from 'stripe';
 
 @Injectable()
 export class PaymentsService {
-  private stripe: Stripe;
+  private stripe: Stripe | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -23,11 +23,12 @@ export class PaymentsService {
   ) {
     const stripeSecretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
     if (!stripeSecretKey) {
-      throw new Error('STRIPE_SECRET_KEY is not configured');
+      console.warn('⚠️  STRIPE_SECRET_KEY is not configured - Stripe payments will be disabled');
+    } else {
+      this.stripe = new Stripe(stripeSecretKey, {
+        apiVersion: '2023-10-16',
+      });
     }
-    this.stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2023-10-16',
-    });
   }
 
   /**
@@ -38,6 +39,12 @@ export class PaymentsService {
     createPaymentIntentDto: CreatePaymentIntentDto,
     userId: string,
   ) {
+    if (!this.stripe) {
+      throw new BadRequestException(
+        'Stripe payments are not configured. Please set STRIPE_SECRET_KEY environment variable.',
+      );
+    }
+
     // Vérifier l'accès au tenant
     const member = await this.validateTenantAccess(tenantId, userId);
 
@@ -183,6 +190,12 @@ export class PaymentsService {
    * Gérer les webhooks Stripe
    */
   async handleStripeWebhook(signature: string, rawBody: Buffer) {
+    if (!this.stripe) {
+      throw new BadRequestException(
+        'Stripe webhooks are not configured. Please set STRIPE_SECRET_KEY environment variable.',
+      );
+    }
+
     const webhookSecret = this.configService.get<string>(
       'STRIPE_WEBHOOK_SECRET',
     );

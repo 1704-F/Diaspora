@@ -11,7 +11,7 @@ services:
       POSTGRES_PASSWORD: diaspora_pass_2025
       POSTGRES_HOST_AUTH_METHOD: trust
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/database/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -28,7 +28,7 @@ services:
     image: redis:7-alpine
     container_name: diaspora-redis
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - redis_data:/data
     networks:
@@ -62,12 +62,10 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - ./backend:/app
-      - /app/node_modules
-      - /app/dist
+      - ./backend/src:/app/src:cached
+      - ./backend/prisma:/app/prisma:cached
     networks:
       - diaspora-network
-    command: npm run start:dev
 
   # Frontend Application
   frontend:
