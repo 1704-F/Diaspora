@@ -10,6 +10,7 @@ import {
   Alert,
   CircularProgress,
   Grid,
+  MenuItem,
 } from '@mui/material';
 import { useAuthStore } from '../../stores/auth.store';
 import toast from 'react-hot-toast';
@@ -24,6 +25,7 @@ export const RegisterPage = () => {
     firstName: '',
     lastName: '',
     phone: '',
+    language: 'fr',
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -46,6 +48,7 @@ export const RegisterPage = () => {
         firstName: formData.firstName,
         lastName: formData.lastName,
         phone: formData.phone || undefined,
+        language: formData.language,
       });
 
       toast.success('Inscription réussie ! Vérifiez votre email.');
@@ -123,6 +126,24 @@ export const RegisterPage = () => {
               onChange={handleChange}
               margin="normal"
             />
+
+            <TextField
+              select
+              fullWidth
+              label="Langue préférée"
+              name="language"
+              value={formData.language}
+              onChange={handleChange}
+              required
+              margin="normal"
+              helperText="Sélectionnez votre langue préférée pour l'interface"
+            >
+              <MenuItem value="fr">🇫🇷 Français</MenuItem>
+              <MenuItem value="en">🇬🇧 English</MenuItem>
+              <MenuItem value="ar">🇸🇦 العربية</MenuItem>
+              <MenuItem value="es">🇪🇸 Español</MenuItem>
+              <MenuItem value="pt">🇵🇹 Português</MenuItem>
+            </TextField>
 
             <TextField
               fullWidth

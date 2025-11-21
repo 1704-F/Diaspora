@@ -26,7 +26,7 @@ export interface RegisterData {
   firstName: string;
   lastName: string;
   phone?: string;
-  language?: string;
+  language: string;
 }
 
 export interface AuthResponse {

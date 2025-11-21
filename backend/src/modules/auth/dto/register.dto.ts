@@ -40,8 +40,8 @@ export class RegisterDto {
   @IsString()
   phone?: string;
 
-  @ApiProperty({ example: 'fr', default: 'fr' })
-  @IsOptional()
+  @ApiProperty({ example: 'fr', description: 'User preferred language (fr, en, etc.)' })
   @IsString()
-  language?: string;
+  @IsNotEmpty()
+  language: string;
 }
