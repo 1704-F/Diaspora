@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -31,6 +32,8 @@ import type { Member, MemberStatus } from '../../types';
 import toast from 'react-hot-toast';
 
 export const MembersPage = () => {
+  const { tenantId } = useParams<{ tenantId: string }>();
+  const navigate = useNavigate();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,13 +49,21 @@ export const MembersPage = () => {
   });
 
   useEffect(() => {
+    // If no tenantId in URL, redirect to associations page
+    if (!tenantId) {
+      navigate('/associations');
+      return;
+    }
+
     loadMembers();
-  }, []);
+  }, [tenantId, navigate]);
 
   const loadMembers = async () => {
+    if (!tenantId) return;
+
     try {
       setLoading(true);
-      const response = await membersService.getAll({ page: 1, limit: 100 });
+      const response = await membersService.getAll(tenantId, { page: 1, limit: 100 });
       setMembers(response.data);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Erreur de chargement');
@@ -85,8 +96,10 @@ export const MembersPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!tenantId) return;
+
     try {
-      await membersService.create(formData);
+      await membersService.create(tenantId, formData);
       toast.success('Membre ajouté avec succès');
       handleCloseDialog();
       loadMembers();
@@ -100,8 +113,10 @@ export const MembersPage = () => {
       return;
     }
 
+    if (!tenantId) return;
+
     try {
-      await membersService.delete(id);
+      await membersService.delete(tenantId, id);
       toast.success('Membre désactivé');
       loadMembers();
     } catch (err: any) {

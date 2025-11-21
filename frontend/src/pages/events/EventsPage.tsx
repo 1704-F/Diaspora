@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -15,16 +16,25 @@ import eventsService from '../../services/events.service';
 import type { Event } from '../../types';
 
 export const EventsPage = () => {
+  const { tenantId } = useParams<{ tenantId: string }>();
+  const navigate = useNavigate();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!tenantId) {
+      navigate('/associations');
+      return;
+    }
+
     loadEvents();
-  }, []);
+  }, [tenantId, navigate]);
 
   const loadEvents = async () => {
+    if (!tenantId) return;
+
     try {
-      const response = await eventsService.getAll({ page: 1, limit: 50 });
+      const response = await eventsService.getAll(tenantId, { page: 1, limit: 50 });
       setEvents(response.data);
     } catch (err) {
       console.error(err);

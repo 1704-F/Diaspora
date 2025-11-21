@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -19,16 +20,25 @@ import projectsService from '../../services/projects.service';
 import type { Project } from '../../types';
 
 export const ProjectsPage = () => {
+  const { tenantId } = useParams<{ tenantId: string }>();
+  const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!tenantId) {
+      navigate('/associations');
+      return;
+    }
+
     loadProjects();
-  }, []);
+  }, [tenantId, navigate]);
 
   const loadProjects = async () => {
+    if (!tenantId) return;
+
     try {
-      const response = await projectsService.getAll({ page: 1, limit: 50 });
+      const response = await projectsService.getAll(tenantId, { page: 1, limit: 50 });
       setProjects(response.data);
     } catch (err) {
       console.error(err);

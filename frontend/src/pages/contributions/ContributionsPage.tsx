@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -18,16 +19,25 @@ import contributionsService from '../../services/contributions.service';
 import type { Contribution } from '../../types';
 
 export const ContributionsPage = () => {
+  const { tenantId } = useParams<{ tenantId: string }>();
+  const navigate = useNavigate();
   const [contributions, setContributions] = useState<Contribution[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!tenantId) {
+      navigate('/associations');
+      return;
+    }
+
     loadContributions();
-  }, []);
+  }, [tenantId, navigate]);
 
   const loadContributions = async () => {
+    if (!tenantId) return;
+
     try {
-      const response = await contributionsService.getAll({ page: 1, limit: 50 });
+      const response = await contributionsService.getAll(tenantId, { page: 1, limit: 50 });
       setContributions(response.data);
     } catch (err) {
       console.error(err);
