@@ -36,47 +36,47 @@ class EventsService {
   /**
    * Get all events
    */
-  async getAll(params?: any): Promise<PaginatedResponse<Event>> {
-    const response = await api.get('/events', { params });
+  async getAll(tenantId: string, params?: any): Promise<PaginatedResponse<Event>> {
+    const response = await api.get(`/associations/${tenantId}/events`, { params });
     return response.data;
   }
 
   /**
    * Get event by ID
    */
-  async getById(id: string): Promise<Event> {
-    const response = await api.get(`/events/${id}`);
+  async getById(tenantId: string, id: string): Promise<Event> {
+    const response = await api.get(`/associations/${tenantId}/events/${id}`);
     return response.data;
   }
 
   /**
    * Create new event
    */
-  async create(data: CreateEventDto): Promise<Event> {
-    const response = await api.post('/events', data);
+  async create(tenantId: string, data: CreateEventDto): Promise<Event> {
+    const response = await api.post(`/associations/${tenantId}/events`, data);
     return response.data;
   }
 
   /**
    * Update event
    */
-  async update(id: string, data: UpdateEventDto): Promise<Event> {
-    const response = await api.patch(`/events/${id}`, data);
+  async update(tenantId: string, id: string, data: UpdateEventDto): Promise<Event> {
+    const response = await api.patch(`/associations/${tenantId}/events/${id}`, data);
     return response.data;
   }
 
   /**
    * Delete event
    */
-  async delete(id: string): Promise<void> {
-    await api.delete(`/events/${id}`);
+  async delete(tenantId: string, id: string): Promise<void> {
+    await api.delete(`/associations/${tenantId}/events/${id}`);
   }
 
   /**
    * Get event statistics
    */
-  async getStats(id: string): Promise<EventStats> {
-    const response = await api.get(`/events/${id}/stats`);
+  async getStats(tenantId: string, id: string): Promise<EventStats> {
+    const response = await api.get(`/associations/${tenantId}/events/${id}/stats`);
     return response.data;
   }
 
@@ -84,18 +84,19 @@ class EventsService {
    * Register for event
    */
   async register(
+    tenantId: string,
     eventId: string,
     data: RegisterEventDto,
   ): Promise<EventRegistration> {
-    const response = await api.post(`/events/${eventId}/register`, data);
+    const response = await api.post(`/associations/${tenantId}/events/${eventId}/register`, data);
     return response.data;
   }
 
   /**
    * Get event registrations
    */
-  async getRegistrations(eventId: string): Promise<EventRegistration[]> {
-    const response = await api.get(`/events/${eventId}/registrations`);
+  async getRegistrations(tenantId: string, eventId: string): Promise<EventRegistration[]> {
+    const response = await api.get(`/associations/${tenantId}/events/${eventId}/registrations`);
     return response.data;
   }
 
@@ -103,10 +104,11 @@ class EventsService {
    * Cancel registration
    */
   async cancelRegistration(
+    tenantId: string,
     eventId: string,
     registrationId: string,
   ): Promise<void> {
-    await api.delete(`/events/${eventId}/registrations/${registrationId}`);
+    await api.delete(`/associations/${tenantId}/events/${eventId}/registrations/${registrationId}`);
   }
 }
 

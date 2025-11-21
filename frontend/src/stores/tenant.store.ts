@@ -28,15 +28,13 @@ export const useTenantStore = create<TenantState>()(
           set({ isLoading: true, error: null });
           const tenants = await associationsService.getAll();
 
-          // If user belongs to associations, set the first one as current (or keep existing)
+          // Keep existing currentTenant if it's still valid, otherwise clear it
           const currentTenant = get().currentTenant;
-          const newCurrentTenant = currentTenant && tenants.find(t => t.id === currentTenant.id)
-            ? currentTenant
-            : tenants[0] || null;
+          const isCurrentTenantStillValid = currentTenant && tenants.find(t => t.id === currentTenant.id);
 
           set({
             tenants,
-            currentTenant: newCurrentTenant,
+            currentTenant: isCurrentTenantStillValid ? currentTenant : null,
             isLoading: false
           });
         } catch (error: any) {

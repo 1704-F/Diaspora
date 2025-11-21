@@ -5,8 +5,8 @@ class DashboardService {
   /**
    * Get dashboard overview statistics
    */
-  async getOverview(): Promise<DashboardStats> {
-    const response = await api.get('/dashboard/overview');
+  async getOverview(tenantId: string): Promise<DashboardStats> {
+    const response = await api.get(`/associations/${tenantId}/dashboard/overview`);
     return response.data;
   }
 }
