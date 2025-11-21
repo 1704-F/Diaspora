@@ -30,24 +30,24 @@ class ContributionsService {
   /**
    * Get all contributions
    */
-  async getAll(params?: any): Promise<PaginatedResponse<Contribution>> {
-    const response = await api.get('/contributions', { params });
+  async getAll(tenantId: string, params?: any): Promise<PaginatedResponse<Contribution>> {
+    const response = await api.get(`/associations/${tenantId}/contributions`, { params });
     return response.data;
   }
 
   /**
    * Get contribution by ID
    */
-  async getById(id: string): Promise<Contribution> {
-    const response = await api.get(`/contributions/${id}`);
+  async getById(tenantId: string, id: string): Promise<Contribution> {
+    const response = await api.get(`/associations/${tenantId}/contributions/${id}`);
     return response.data;
   }
 
   /**
    * Create new contribution
    */
-  async create(data: CreateContributionDto): Promise<Contribution> {
-    const response = await api.post('/contributions', data);
+  async create(tenantId: string, data: CreateContributionDto): Promise<Contribution> {
+    const response = await api.post(`/associations/${tenantId}/contributions`, data);
     return response.data;
   }
 
@@ -55,33 +55,34 @@ class ContributionsService {
    * Update contribution
    */
   async update(
+    tenantId: string,
     id: string,
     data: UpdateContributionDto,
   ): Promise<Contribution> {
-    const response = await api.patch(`/contributions/${id}`, data);
+    const response = await api.patch(`/associations/${tenantId}/contributions/${id}`, data);
     return response.data;
   }
 
   /**
    * Delete contribution
    */
-  async delete(id: string): Promise<void> {
-    await api.delete(`/contributions/${id}`);
+  async delete(tenantId: string, id: string): Promise<void> {
+    await api.delete(`/associations/${tenantId}/contributions/${id}`);
   }
 
   /**
    * Get contribution statistics
    */
-  async getStats(id: string): Promise<ContributionStats> {
-    const response = await api.get(`/contributions/${id}/stats`);
+  async getStats(tenantId: string, id: string): Promise<ContributionStats> {
+    const response = await api.get(`/associations/${tenantId}/contributions/${id}/stats`);
     return response.data;
   }
 
   /**
    * Get unpaid members for a contribution
    */
-  async getUnpaidMembers(id: string): Promise<Member[]> {
-    const response = await api.get(`/contributions/${id}/unpaid-members`);
+  async getUnpaidMembers(tenantId: string, id: string): Promise<Member[]> {
+    const response = await api.get(`/associations/${tenantId}/contributions/${id}/unpaid-members`);
     return response.data;
   }
 }

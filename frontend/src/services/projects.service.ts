@@ -25,55 +25,55 @@ class ProjectsService {
   /**
    * Get all projects
    */
-  async getAll(params?: any): Promise<PaginatedResponse<Project>> {
-    const response = await api.get('/projects', { params });
+  async getAll(tenantId: string, params?: any): Promise<PaginatedResponse<Project>> {
+    const response = await api.get(`/associations/${tenantId}/projects`, { params });
     return response.data;
   }
 
   /**
    * Get project by ID
    */
-  async getById(id: string): Promise<Project> {
-    const response = await api.get(`/projects/${id}`);
+  async getById(tenantId: string, id: string): Promise<Project> {
+    const response = await api.get(`/associations/${tenantId}/projects/${id}`);
     return response.data;
   }
 
   /**
    * Create new project
    */
-  async create(data: CreateProjectDto): Promise<Project> {
-    const response = await api.post('/projects', data);
+  async create(tenantId: string, data: CreateProjectDto): Promise<Project> {
+    const response = await api.post(`/associations/${tenantId}/projects`, data);
     return response.data;
   }
 
   /**
    * Update project
    */
-  async update(id: string, data: UpdateProjectDto): Promise<Project> {
-    const response = await api.patch(`/projects/${id}`, data);
+  async update(tenantId: string, id: string, data: UpdateProjectDto): Promise<Project> {
+    const response = await api.patch(`/associations/${tenantId}/projects/${id}`, data);
     return response.data;
   }
 
   /**
    * Delete project
    */
-  async delete(id: string): Promise<void> {
-    await api.delete(`/projects/${id}`);
+  async delete(tenantId: string, id: string): Promise<void> {
+    await api.delete(`/associations/${tenantId}/projects/${id}`);
   }
 
   /**
    * Get project statistics
    */
-  async getStats(id: string): Promise<ProjectStats> {
-    const response = await api.get(`/projects/${id}/stats`);
+  async getStats(tenantId: string, id: string): Promise<ProjectStats> {
+    const response = await api.get(`/associations/${tenantId}/projects/${id}/stats`);
     return response.data;
   }
 
   /**
    * Get project financial summary
    */
-  async getFinancialSummary(id: string): Promise<any> {
-    const response = await api.get(`/projects/${id}/financial-summary`);
+  async getFinancialSummary(tenantId: string, id: string): Promise<any> {
+    const response = await api.get(`/associations/${tenantId}/projects/${id}/financial-summary`);
     return response.data;
   }
 }

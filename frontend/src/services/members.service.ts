@@ -40,62 +40,62 @@ class MembersService {
   /**
    * Get all members with filters
    */
-  async getAll(filters?: MemberFilters): Promise<PaginatedResponse<Member>> {
-    const response = await api.get('/members', { params: filters });
+  async getAll(tenantId: string, filters?: MemberFilters): Promise<PaginatedResponse<Member>> {
+    const response = await api.get(`/associations/${tenantId}/members`, { params: filters });
     return response.data;
   }
 
   /**
    * Get member by ID
    */
-  async getById(id: string): Promise<Member> {
-    const response = await api.get(`/members/${id}`);
+  async getById(tenantId: string, id: string): Promise<Member> {
+    const response = await api.get(`/associations/${tenantId}/members/${id}`);
     return response.data;
   }
 
   /**
    * Create new member
    */
-  async create(data: CreateMemberDto): Promise<Member> {
-    const response = await api.post('/members', data);
+  async create(tenantId: string, data: CreateMemberDto): Promise<Member> {
+    const response = await api.post(`/associations/${tenantId}/members`, data);
     return response.data;
   }
 
   /**
    * Update member
    */
-  async update(id: string, data: UpdateMemberDto): Promise<Member> {
-    const response = await api.patch(`/members/${id}`, data);
+  async update(tenantId: string, id: string, data: UpdateMemberDto): Promise<Member> {
+    const response = await api.patch(`/associations/${tenantId}/members/${id}`, data);
     return response.data;
   }
 
   /**
    * Delete member (soft delete)
    */
-  async delete(id: string): Promise<void> {
-    await api.delete(`/members/${id}`);
+  async delete(tenantId: string, id: string): Promise<void> {
+    await api.delete(`/associations/${tenantId}/members/${id}`);
   }
 
   /**
    * Get member statistics
    */
-  async getStats(id: string): Promise<MemberStats> {
-    const response = await api.get(`/members/${id}/stats`);
+  async getStats(tenantId: string, id: string): Promise<MemberStats> {
+    const response = await api.get(`/associations/${tenantId}/members/${id}/stats`);
     return response.data;
   }
 
   /**
    * Assign role to member
    */
-  async assignRole(memberId: string, roleId: string): Promise<void> {
-    await api.post(`/members/${memberId}/roles/${roleId}`);
+  async assignRole(tenantId: string, memberId: string, roleId: string): Promise<void> {
+    await api.post(`/associations/${tenantId}/members/${memberId}/roles/${roleId}`);
   }
 
   /**
    * Remove role from member
    */
-  async removeRole(memberId: string, roleId: string): Promise<void> {
-    await api.delete(`/members/${memberId}/roles/${roleId}`);
+  async removeRole(tenantId: string, memberId: string, roleId: string): Promise<void> {
+    await api.delete(`/associations/${tenantId}/members/${memberId}/roles/${roleId}`);
   }
 }
 
