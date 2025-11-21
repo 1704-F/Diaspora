@@ -139,6 +139,56 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/associations/:tenantId/members"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <MembersPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/associations/:tenantId/projects"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <ProjectsPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/associations/:tenantId/events"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <EventsPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/associations/:tenantId/contributions"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <ContributionsPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/associations/:tenantId/payments"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <PaymentsPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
 
           {/* Old routes (to be migrated) */}
           <Route

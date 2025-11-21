@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
   Grid,
@@ -61,18 +62,28 @@ const StatCard = ({ title, value, icon, color, subtitle }: StatCardProps) => (
 );
 
 export const Dashboard = () => {
+  const { tenantId } = useParams<{ tenantId: string }>();
+  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // If no tenantId in URL, redirect to associations page
+    if (!tenantId) {
+      navigate('/associations');
+      return;
+    }
+
     loadStats();
-  }, []);
+  }, [tenantId, navigate]);
 
   const loadStats = async () => {
+    if (!tenantId) return;
+
     try {
       setLoading(true);
-      const data = await dashboardService.getOverview();
+      const data = await dashboardService.getOverview(tenantId);
       setStats(data);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Erreur de chargement');

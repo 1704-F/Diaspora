@@ -3,6 +3,7 @@ import { Menu as MenuIcon, AccountCircle, Logout } from '@mui/icons-material';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/auth.store';
+import { TenantSwitcher } from './TenantSwitcher';
 
 interface NavbarProps {
   onMenuClick: () => void;
@@ -45,9 +46,13 @@ export const Navbar = ({ onMenuClick }: NavbarProps) => {
           <MenuIcon />
         </IconButton>
 
-        <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+        <Typography variant="h6" noWrap component="div">
           🌍 Diaspora Platform
         </Typography>
+
+        <TenantSwitcher />
+
+        <Box sx={{ flexGrow: 1 }} />
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Typography variant="body2" sx={{ display: { xs: 'none', md: 'block' } }}>

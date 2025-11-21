@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -16,7 +17,16 @@ import {
 import { Add } from '@mui/icons-material';
 
 export const PaymentsPage = () => {
+  const { tenantId } = useParams<{ tenantId: string }>();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!tenantId) {
+      navigate('/associations');
+      return;
+    }
+  }, [tenantId, navigate]);
 
   return (
     <Box>

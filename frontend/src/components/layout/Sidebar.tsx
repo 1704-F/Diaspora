@@ -8,7 +8,7 @@ import {
   Work,
   Settings,
 } from '@mui/icons-material';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 
 const drawerWidth = 240;
 
@@ -17,18 +17,27 @@ interface SidebarProps {
   onClose: () => void;
 }
 
-const menuItems = [
-  { text: 'Dashboard', icon: <Dashboard />, path: '/' },
-  { text: 'Membres', icon: <People />, path: '/members' },
-  { text: 'Cotisations', icon: <AccountBalance />, path: '/contributions' },
-  { text: 'Paiements', icon: <Payment />, path: '/payments' },
-  { text: 'Projets', icon: <Work />, path: '/projects' },
-  { text: 'Événements', icon: <Event />, path: '/events' },
+const baseMenuItems = [
+  { text: 'Dashboard', icon: <Dashboard />, path: 'dashboard' },
+  { text: 'Membres', icon: <People />, path: 'members' },
+  { text: 'Cotisations', icon: <AccountBalance />, path: 'contributions' },
+  { text: 'Paiements', icon: <Payment />, path: 'payments' },
+  { text: 'Projets', icon: <Work />, path: 'projects' },
+  { text: 'Événements', icon: <Event />, path: 'events' },
 ];
 
 export const Sidebar = ({ mobileOpen, onClose }: SidebarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { tenantId } = useParams<{ tenantId: string }>();
+
+  // Build menu items with tenantId in paths
+  const menuItems = tenantId
+    ? baseMenuItems.map(item => ({
+        ...item,
+        fullPath: `/associations/${tenantId}/${item.path}`
+      }))
+    : [];
 
   const handleNavigate = (path: string) => {
     navigate(path);
@@ -43,8 +52,8 @@ export const Sidebar = ({ mobileOpen, onClose }: SidebarProps) => {
         {menuItems.map((item) => (
           <ListItem key={item.text} disablePadding>
             <ListItemButton
-              selected={location.pathname === item.path}
-              onClick={() => handleNavigate(item.path)}
+              selected={location.pathname === item.fullPath}
+              onClick={() => handleNavigate(item.fullPath)}
             >
               <ListItemIcon>{item.icon}</ListItemIcon>
               <ListItemText primary={item.text} />
@@ -55,7 +64,7 @@ export const Sidebar = ({ mobileOpen, onClose }: SidebarProps) => {
       <Divider />
       <List>
         <ListItem disablePadding>
-          <ListItemButton onClick={() => handleNavigate('/settings')}>
+          <ListItemButton onClick={() => handleNavigate(tenantId ? `/associations/${tenantId}/settings` : '/settings')}>
             <ListItemIcon>
               <Settings />
             </ListItemIcon>
