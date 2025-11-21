@@ -20,6 +20,33 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Inject tenantId into URLs that need it
+    const tenantStorage = localStorage.getItem('tenant-storage');
+    if (tenantStorage) {
+      try {
+        const { state } = JSON.parse(tenantStorage);
+        const currentTenant = state?.currentTenant;
+
+        if (currentTenant?.id && config.url) {
+          // List of endpoints that need tenantId prefix
+          const tenantEndpoints = ['/members', '/projects', '/events', '/contributions', '/payments'];
+
+          // Check if URL starts with any tenant endpoint
+          const needsTenant = tenantEndpoints.some(endpoint =>
+            config.url?.startsWith(endpoint)
+          );
+
+          if (needsTenant) {
+            // Inject tenantId: /members -> /associations/:tenantId/members
+            config.url = `/associations/${currentTenant.id}${config.url}`;
+          }
+        }
+      } catch (e) {
+        console.error('Failed to inject tenantId:', e);
+      }
+    }
+
     return config;
   },
   (error) => {

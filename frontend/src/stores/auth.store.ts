@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import authService from '../services/auth.service';
+import { useTenantStore } from './tenant.store';
 import type { User, LoginCredentials, RegisterData } from '../types';
 
 interface AuthState {
@@ -30,6 +31,14 @@ export const useAuthStore = create<AuthState>()(
           set({ isLoading: true, error: null });
           const { user } = await authService.login(credentials);
           set({ user, isAuthenticated: true, isLoading: false });
+
+          // Load user's associations/tenants after successful login
+          try {
+            await useTenantStore.getState().loadTenants();
+          } catch (tenantError) {
+            console.error('Failed to load tenants:', tenantError);
+            // Don't fail login if tenants can't be loaded
+          }
         } catch (error: any) {
           set({
             error: error.response?.data?.message || 'Login failed',
@@ -58,6 +67,8 @@ export const useAuthStore = create<AuthState>()(
           await authService.logout();
         } finally {
           set({ user: null, isAuthenticated: false, error: null });
+          // Clear tenant data on logout
+          useTenantStore.getState().clearTenant();
         }
       },
 
