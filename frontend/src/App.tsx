@@ -6,6 +6,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTheme } from '@mui/material/styles';
 import './i18n/config'; // Initialize i18n
 import { useAuthStore } from './stores/auth.store';
+import { useTenantStore } from './stores/tenant.store';
+import { useRolesStore } from './stores/roles.store';
+import membersService from './services/members.service';
 import { Layout } from './components/layout/Layout';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
@@ -60,10 +63,29 @@ const LanguageCheckRoute = ({ children }: { children: React.ReactNode }) => {
 
 function App() {
   const { isAuthenticated, loadUser } = useAuthStore();
+  const currentTenant = useTenantStore((state) => state.currentTenant);
+  const loadMemberRoles = useRolesStore((state) => state.loadMemberRoles);
 
+  // Load user on app start
   useEffect(() => {
     loadUser();
-  }, []);
+  }, [loadUser]);
+
+  // Load roles when authenticated and has a current tenant
+  useEffect(() => {
+    const loadRoles = async () => {
+      if (isAuthenticated && currentTenant) {
+        try {
+          const member = await membersService.getCurrentMember(currentTenant.id);
+          await loadMemberRoles(currentTenant.id, member.id);
+        } catch (error) {
+          console.error('Failed to load member roles on startup:', error);
+        }
+      }
+    };
+
+    loadRoles();
+  }, [isAuthenticated, currentTenant, loadMemberRoles]);
 
   return (
     <QueryClientProvider client={queryClient}>

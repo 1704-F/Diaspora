@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import authService from '../services/auth.service';
 import { useTenantStore } from './tenant.store';
+import { useRolesStore } from './roles.store';
 import type { User, LoginCredentials, RegisterData } from '../types';
 
 interface AuthState {
@@ -59,8 +60,9 @@ export const useAuthStore = create<AuthState>()(
           await authService.logout();
         } finally {
           set({ user: null, isAuthenticated: false, error: null });
-          // Clear tenant data on logout
+          // Clear tenant and roles data on logout
           useTenantStore.getState().clearTenant();
+          useRolesStore.getState().clearRoles();
         }
       },
 

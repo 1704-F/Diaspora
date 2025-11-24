@@ -38,6 +38,17 @@ export class MembersController {
     return this.membersService.create(tenantId, createMemberDto, user.id);
   }
 
+  @Get('me')
+  @ApiOperation({ summary: 'Get current user member profile for this association' })
+  @ApiResponse({ status: 200, description: 'Current user member profile' })
+  @ApiResponse({ status: 404, description: 'User is not a member of this association' })
+  async getCurrentMember(
+    @Param('tenantId') tenantId: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.membersService.findByUserId(tenantId, user.id);
+  }
+
   @Get()
   @ApiOperation({ summary: 'Get all members of the association' })
   @ApiQuery({ name: 'status', required: false, enum: ['ACTIVE', 'INACTIVE', 'SUSPENDED'] })

@@ -277,6 +277,55 @@ export class MembersService {
   }
 
   /**
+   * Get member by user ID for a specific association
+   */
+  async findByUserId(tenantId: string, userId: string) {
+    const member = await this.prisma.member.findFirst({
+      where: {
+        userId,
+        tenantId,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            avatarUrl: true,
+            createdAt: true,
+          },
+        },
+        section: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        roles: {
+          include: {
+            role: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                permissions: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!member) {
+      throw new NotFoundException('User is not a member of this association');
+    }
+
+    return member;
+  }
+
+  /**
    * Update a member
    */
   async update(
