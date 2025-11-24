@@ -18,7 +18,12 @@
     "loading": "Chargement...",
     "error": "Erreur",
     "success": "Succès",
-    "settings": "Paramètres"
+    "settings": "Paramètres",
+    "name": "Nom",
+    "date": "Date",
+    "member": "Membre",
+    "active": "Active",
+    "inactive": "Inactive"
   },
   "language": {
     "select": "Choisissez votre langue",
@@ -189,7 +194,8 @@
     "paid": "Payé",
     "pending": "En attente",
     "overdue": "En retard",
-    "status": "Statut"
+    "status": "Statut",
+    "noContributions": "Aucune cotisation trouvée"
   },
   "payments": {
     "title": "Paiements",
@@ -198,11 +204,14 @@
     "paymentDate": "Date de paiement",
     "reference": "Référence",
     "receipt": "Reçu",
+    "amount": "Montant",
+    "status": "Statut",
     "card": "Carte bancaire",
     "bankTransfer": "Virement bancaire",
     "mobileMoney": "Mobile Money",
     "cash": "Espèces",
-    "other": "Autre"
+    "other": "Autre",
+    "noPayments": "Aucun paiement enregistré"
   },
   "projects": {
     "title": "Projets",
@@ -211,6 +220,7 @@
     "description": "Description",
     "budget": "Budget",
     "spent": "Dépensé",
+    "usage": "Utilisation",
     "progress": "Progression",
     "status": "Statut",
     "startDate": "Date de début",
@@ -220,7 +230,8 @@
     "inProgress": "En cours",
     "completed": "Terminé",
     "onHold": "En pause",
-    "cancelled": "Annulé"
+    "cancelled": "Annulé",
+    "noProjects": "Aucun projet trouvé"
   },
   "events": {
     "title": "Événements",
@@ -232,13 +243,16 @@
     "location": "Lieu",
     "capacity": "Capacité",
     "participants": "Participants",
+    "maxParticipants": "Max {{count}} participants",
+    "viewDetails": "Voir détails",
     "register": "S'inscrire",
     "registered": "Inscrit",
     "meeting": "Réunion",
     "workshop": "Atelier",
     "conference": "Conférence",
     "social": "Social",
-    "generalAssembly": "Assemblée Générale"
+    "generalAssembly": "Assemblée Générale",
+    "noEvents": "Aucun événement trouvé"
   },
   "currencies": {
     "EUR": "Euro (EUR)",

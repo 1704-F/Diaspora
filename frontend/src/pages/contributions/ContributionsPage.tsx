@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -21,6 +22,7 @@ import type { Contribution } from '../../types';
 export const ContributionsPage = () => {
   const { tenantId } = useParams<{ tenantId: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [contributions, setContributions] = useState<Contribution[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -57,9 +59,9 @@ export const ContributionsPage = () => {
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-        <Typography variant="h4">Cotisations</Typography>
+        <Typography variant="h4">{t('contributions.title')}</Typography>
         <Button variant="contained" startIcon={<Add />}>
-          Créer une cotisation
+          {t('contributions.addContribution')}
         </Button>
       </Box>
 
@@ -67,12 +69,12 @@ export const ContributionsPage = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Nom</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>Montant</TableCell>
-              <TableCell>Fréquence</TableCell>
-              <TableCell>Statut</TableCell>
-              <TableCell>Date limite</TableCell>
+              <TableCell>{t('common.name')}</TableCell>
+              <TableCell>{t('contributions.type')}</TableCell>
+              <TableCell>{t('contributions.amount')}</TableCell>
+              <TableCell>{t('contributions.frequency')}</TableCell>
+              <TableCell>{t('contributions.status')}</TableCell>
+              <TableCell>{t('contributions.dueDate')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -88,7 +90,7 @@ export const ContributionsPage = () => {
                 <TableCell>{contribution.frequency}</TableCell>
                 <TableCell>
                   <Chip
-                    label={contribution.isActive ? 'Active' : 'Inactive'}
+                    label={contribution.isActive ? t('common.active') : t('common.inactive')}
                     color={contribution.isActive ? 'success' : 'default'}
                     size="small"
                   />
@@ -106,7 +108,7 @@ export const ContributionsPage = () => {
 
       {contributions.length === 0 && (
         <Typography variant="body1" color="text.secondary" textAlign="center" py={8}>
-          Aucune cotisation trouvée
+          {t('contributions.noContributions')}
         </Typography>
       )}
     </Box>
