@@ -1,8 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import associationsService from '../services/associations.service';
-import membersService from '../services/members.service';
-import { useRolesStore } from './roles.store';
 import type { Association } from '../types';
 
 interface TenantState {
@@ -48,19 +46,9 @@ export const useTenantStore = create<TenantState>()(
         }
       },
 
-      setCurrentTenant: async (tenant) => {
+      setCurrentTenant: (tenant) => {
         set({ currentTenant: tenant });
-
-        // Load user's roles for this tenant
-        try {
-          const member = await membersService.getCurrentMember(tenant.id);
-          const rolesStore = useRolesStore.getState();
-          await rolesStore.loadMemberRoles(tenant.id, member.id);
-        } catch (error) {
-          console.error('Failed to load member roles:', error);
-          // Clear roles if user is not a member
-          useRolesStore.getState().clearRoles();
-        }
+        // Note: Roles are loaded automatically by App.tsx useEffect when currentTenant changes
       },
 
       clearTenant: () => set({ currentTenant: null, tenants: [], error: null }),
