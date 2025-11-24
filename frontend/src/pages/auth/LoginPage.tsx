@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Container,
@@ -14,6 +15,7 @@ import { useAuthStore } from '../../stores/auth.store';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { login, isLoading, error, clearError } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -45,37 +47,34 @@ export const LoginPage = () => {
             🌍 Diaspora Platform
           </Typography>
           <Typography variant="h6" gutterBottom textAlign="center" color="text.secondary">
-            Connexion
+            {t('auth.login')}
           </Typography>
 
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert severity="error" sx={{ mb: 3 }}>
               {error}
             </Alert>
           )}
 
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
             <TextField
               fullWidth
-              label="Email"
+              label={t('auth.email')}
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              required
               margin="normal"
-              autoComplete="email"
+              required
               autoFocus
             />
-
             <TextField
               fullWidth
-              label="Mot de passe"
+              label={t('auth.password')}
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
               margin="normal"
-              autoComplete="current-password"
+              required
             />
 
             <Button
@@ -83,25 +82,17 @@ export const LoginPage = () => {
               fullWidth
               variant="contained"
               size="large"
-              sx={{ mt: 3, mb: 2 }}
               disabled={isLoading}
+              sx={{ mt: 3, mb: 2 }}
             >
-              {isLoading ? <CircularProgress size={24} /> : 'Se connecter'}
+              {isLoading ? <CircularProgress size={24} /> : t('auth.signIn')}
             </Button>
 
-            <Box sx={{ textAlign: 'center' }}>
-              <Link to="/forgot-password" style={{ textDecoration: 'none', color: 'inherit' }}>
-                <Typography variant="body2" color="primary">
-                  Mot de passe oublié ?
-                </Typography>
-              </Link>
-
-              <Typography variant="body2" sx={{ mt: 2 }}>
-                Pas encore de compte ?{' '}
-                <Link to="/register" style={{ textDecoration: 'none' }}>
-                  <Typography component="span" color="primary">
-                    S'inscrire
-                  </Typography>
+            <Box sx={{ textAlign: 'center', mt: 2 }}>
+              <Typography variant="body2">
+                {t('auth.noAccount')}{' '}
+                <Link to="/register" style={{ textDecoration: 'none', color: '#003D3D', fontWeight: 'bold' }}>
+                  {t('auth.signUp')}
                 </Link>
               </Typography>
             </Box>

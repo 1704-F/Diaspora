@@ -1,19 +1,18 @@
 import { useEffect } from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, CssBaseline } from '@mui/material';
 import { Toaster } from 'react-hot-toast';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTheme } from '@mui/material/styles';
+import './i18n/config'; // Initialize i18n
 import { useAuthStore } from './stores/auth.store';
 import { Layout } from './components/layout/Layout';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
-import { AppsHubPage } from './pages/AppsHub/AppsHubPage';
-import {
-  AssociationsPage,
-  CreateAssociationPage,
-  SelectAssociationPage,
-} from './pages/Associations';
+import { LanguageSelectionPage } from './pages/LanguageSelectionPage';
+import { OnboardingWizard } from './pages/onboarding/OnboardingWizard';
+import { DashboardRedirect } from './pages/DashboardRedirect';
+import { SelectAssociationPage } from './pages/Associations';
 import { Dashboard } from './pages/Dashboard';
 import { MembersPage } from './pages/members/MembersPage';
 import { EventsPage } from './pages/events/EventsPage';
@@ -33,10 +32,10 @@ const queryClient = new QueryClient({
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#4F46E5',
+      main: '#003D3D',
     },
     secondary: {
-      main: '#10B981',
+      main: '#006666',
     },
   },
 });
@@ -51,6 +50,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   return !isAuthenticated ? <>{children}</> : <Navigate to="/dashboard" replace />;
+};
+
+// Language Check Route - redirects to language selection if not set
+const LanguageCheckRoute = ({ children }: { children: React.ReactNode }) => {
+  const selectedLanguage = localStorage.getItem('selectedLanguage');
+  return selectedLanguage ? <>{children}</> : <Navigate to="/" replace />;
 };
 
 function App() {
@@ -76,51 +81,52 @@ function App() {
         />
 
         <Routes>
+          {/* Language Selection - First screen */}
+          <Route path="/" element={<LanguageSelectionPage />} />
+
           {/* Public Routes */}
           <Route
             path="/login"
             element={
-              <PublicRoute>
-                <LoginPage />
-              </PublicRoute>
+              <LanguageCheckRoute>
+                <PublicRoute>
+                  <LoginPage />
+                </PublicRoute>
+              </LanguageCheckRoute>
             }
           />
           <Route
             path="/register"
             element={
-              <PublicRoute>
-                <RegisterPage />
-              </PublicRoute>
+              <LanguageCheckRoute>
+                <PublicRoute>
+                  <RegisterPage />
+                </PublicRoute>
+              </LanguageCheckRoute>
             }
           />
 
-          {/* Protected Routes */}
+          {/* Onboarding - for new users */}
+          <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute>
+                <OnboardingWizard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Dashboard Redirect - intelligent routing */}
           <Route
             path="/dashboard"
             element={
               <ProtectedRoute>
-                <AppsHubPage />
+                <DashboardRedirect />
               </ProtectedRoute>
             }
           />
 
-          {/* Associations Routes */}
-          <Route
-            path="/associations"
-            element={
-              <ProtectedRoute>
-                <AssociationsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/associations/create"
-            element={
-              <ProtectedRoute>
-                <CreateAssociationPage />
-              </ProtectedRoute>
-            }
-          />
+          {/* Association Selection */}
           <Route
             path="/associations/select"
             element={
@@ -129,6 +135,8 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* Association-specific Routes (with tenantId) */}
           <Route
             path="/associations/:tenantId/dashboard"
             element={
@@ -190,70 +198,16 @@ function App() {
             }
           />
 
-          {/* Old routes (to be migrated) */}
+          {/* Catch all - redirect to language selection or dashboard */}
           <Route
-            path="/"
+            path="*"
             element={
-              <ProtectedRoute>
-                <Layout>
-                  <Dashboard />
-                </Layout>
-              </ProtectedRoute>
+              <Navigate
+                to={isAuthenticated ? "/dashboard" : "/"}
+                replace
+              />
             }
           />
-          <Route
-            path="/members"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <MembersPage />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/contributions"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <ContributionsPage />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/payments"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <PaymentsPage />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/projects"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <ProjectsPage />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/events"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <EventsPage />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Catch all */}
-          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </ThemeProvider>
     </QueryClientProvider>
