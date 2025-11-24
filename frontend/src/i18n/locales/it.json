@@ -14,7 +14,8 @@
     "confirm": "Conferma",
     "loading": "Caricamento...",
     "error": "Errore",
-    "success": "Successo"
+    "success": "Successo",
+    "settings": "Impostazioni"
   },
   "language": {
     "select": "Scegli la tua lingua",
