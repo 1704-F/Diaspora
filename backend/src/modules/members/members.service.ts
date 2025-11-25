@@ -55,15 +55,12 @@ export class MembersService {
       throw new ConflictException('This user is already a member of this association');
     }
 
-    // Get the next member number
-    const lastMember = await this.prisma.member.findFirst({
+    // Get the next member number by counting existing members for this tenant
+    const memberCount = await this.prisma.member.count({
       where: { tenantId },
-      orderBy: { memberNumber: 'desc' },
     });
 
-    const nextNumber = lastMember
-      ? parseInt(lastMember.memberNumber?.replace('M', '') || '0') + 1
-      : 1;
+    const nextNumber = memberCount + 1;
     const memberNumber = `M${String(nextNumber).padStart(3, '0')}`;
 
     // Create member
