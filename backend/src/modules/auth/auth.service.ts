@@ -179,6 +179,44 @@ export class AuthService {
   }
 
   /**
+   * DEV ONLY: Verify email by email address (bypass token)
+   * This should only be used in development environment
+   */
+  async devVerifyEmailByAddress(email: string) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new BadRequestException('This endpoint is only available in development mode');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.emailVerified) {
+      return { message: 'Email already verified', user: { email: user.email, emailVerified: true } };
+    }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerified: true,
+        emailVerificationToken: null,
+      },
+    });
+
+    return {
+      message: 'Email verified successfully (DEV MODE)',
+      user: {
+        email: user.email,
+        emailVerified: true
+      }
+    };
+  }
+
+  /**
    * Forgot password - send reset link
    */
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {

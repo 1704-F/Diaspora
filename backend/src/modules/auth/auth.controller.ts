@@ -52,6 +52,17 @@ export class AuthController {
   }
 
   @Public()
+  @Post('dev/verify-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '[DEV ONLY] Verify email by email address without token' })
+  @ApiResponse({ status: 200, description: 'Email verified successfully' })
+  @ApiResponse({ status: 400, description: 'Only available in development mode' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async devVerifyEmail(@Body('email') email: string) {
+    return this.authService.devVerifyEmailByAddress(email);
+  }
+
+  @Public()
   @Throttle({ default: { limit: 3, ttl: 300000 } }) // 3 attempts per 5 minutes
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
