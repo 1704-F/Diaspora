@@ -11,7 +11,7 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto, ForgotPasswordDto, ResetPasswordDto } from './dto';
+import { RegisterDto, LoginDto, ForgotPasswordDto, ResetPasswordDto, DevVerifyEmailDto } from './dto';
 import { Public } from '@/shared/decorators/public.decorator';
 import { CurrentUser } from '@/shared/decorators/current-user.decorator';
 import { JwtAuthGuard } from '@/shared/guards/jwt-auth.guard';
@@ -58,8 +58,8 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Email verified successfully' })
   @ApiResponse({ status: 400, description: 'Only available in development mode' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  async devVerifyEmail(@Body('email') email: string) {
-    return this.authService.devVerifyEmailByAddress(email);
+  async devVerifyEmail(@Body() dto: DevVerifyEmailDto) {
+    return this.authService.devVerifyEmailByAddress(dto.email);
   }
 
   @Public()
