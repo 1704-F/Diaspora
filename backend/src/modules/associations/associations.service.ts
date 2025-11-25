@@ -110,15 +110,12 @@ export class AssociationsService {
       });
 
       // 3. Create member for the user (founder)
-      // Get the next member number for this tenant
-      const lastMember = await tx.member.findFirst({
+      // Get the next member number for this tenant by counting existing members
+      const memberCount = await tx.member.count({
         where: { tenantId: tenant.id },
-        orderBy: { memberNumber: 'desc' },
       });
 
-      const nextNumber = lastMember
-        ? parseInt(lastMember.memberNumber?.replace('M', '') || '0') + 1
-        : 1;
+      const nextNumber = memberCount + 1;
       const memberNumber = `M${String(nextNumber).padStart(3, '0')}`;
 
       const member = await tx.member.create({
