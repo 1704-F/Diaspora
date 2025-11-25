@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -19,6 +20,7 @@ import { Add } from '@mui/icons-material';
 export const PaymentsPage = () => {
   const { tenantId } = useParams<{ tenantId: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -31,9 +33,9 @@ export const PaymentsPage = () => {
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-        <Typography variant="h4">Paiements</Typography>
+        <Typography variant="h4">{t('payments.title')}</Typography>
         <Button variant="contained" startIcon={<Add />}>
-          Enregistrer un paiement
+          {t('payments.recordPayment')}
         </Button>
       </Box>
 
@@ -41,19 +43,19 @@ export const PaymentsPage = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Date</TableCell>
-              <TableCell>Membre</TableCell>
-              <TableCell>Montant</TableCell>
-              <TableCell>Méthode</TableCell>
-              <TableCell>Statut</TableCell>
-              <TableCell>Référence</TableCell>
+              <TableCell>{t('common.date')}</TableCell>
+              <TableCell>{t('common.member')}</TableCell>
+              <TableCell>{t('payments.amount')}</TableCell>
+              <TableCell>{t('payments.paymentMethod')}</TableCell>
+              <TableCell>{t('payments.status')}</TableCell>
+              <TableCell>{t('payments.reference')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             <TableRow>
               <TableCell colSpan={6} align="center">
                 <Typography color="text.secondary" py={4}>
-                  Aucun paiement enregistré
+                  {t('payments.noPayments')}
                 </Typography>
               </TableCell>
             </TableRow>

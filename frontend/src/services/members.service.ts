@@ -54,6 +54,14 @@ class MembersService {
   }
 
   /**
+   * Get current user's member profile for this association
+   */
+  async getCurrentMember(tenantId: string): Promise<Member> {
+    const response = await api.get(`/associations/${tenantId}/members/me`);
+    return response.data;
+  }
+
+  /**
    * Create new member
    */
   async create(tenantId: string, data: CreateMemberDto): Promise<Member> {

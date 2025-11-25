@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -22,6 +23,7 @@ import type { Project } from '../../types';
 export const ProjectsPage = () => {
   const { tenantId } = useParams<{ tenantId: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -77,9 +79,9 @@ export const ProjectsPage = () => {
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-        <Typography variant="h4">Projets</Typography>
+        <Typography variant="h4">{t('projects.title')}</Typography>
         <Button variant="contained" startIcon={<Add />}>
-          Créer un projet
+          {t('projects.addProject')}
         </Button>
       </Box>
 
@@ -87,12 +89,12 @@ export const ProjectsPage = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Nom</TableCell>
-              <TableCell>Budget</TableCell>
-              <TableCell>Dépensé</TableCell>
-              <TableCell>Utilisation</TableCell>
-              <TableCell>Statut</TableCell>
-              <TableCell>Date début</TableCell>
+              <TableCell>{t('common.name')}</TableCell>
+              <TableCell>{t('projects.budget')}</TableCell>
+              <TableCell>{t('projects.spent')}</TableCell>
+              <TableCell>{t('projects.usage')}</TableCell>
+              <TableCell>{t('projects.status')}</TableCell>
+              <TableCell>{t('projects.startDate')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -128,7 +130,7 @@ export const ProjectsPage = () => {
 
       {projects.length === 0 && (
         <Typography variant="body1" color="text.secondary" textAlign="center" py={8}>
-          Aucun projet trouvé
+          {t('projects.noProjects')}
         </Typography>
       )}
     </Box>

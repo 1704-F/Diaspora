@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -18,6 +19,7 @@ import type { Event } from '../../types';
 export const EventsPage = () => {
   const { tenantId } = useParams<{ tenantId: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -54,9 +56,9 @@ export const EventsPage = () => {
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-        <Typography variant="h4">Événements</Typography>
+        <Typography variant="h4">{t('events.title')}</Typography>
         <Button variant="contained" startIcon={<Add />}>
-          Créer un événement
+          {t('events.addEvent')}
         </Button>
       </Box>
 
@@ -89,16 +91,16 @@ export const EventsPage = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <People fontSize="small" color="action" />
                       <Typography variant="body2">
-                        Max {event.maxAttendees} participants
+                        {t('events.maxParticipants', { count: event.maxAttendees })}
                       </Typography>
                     </Box>
                   )}
                 </Box>
               </CardContent>
               <CardActions>
-                <Button size="small">Voir détails</Button>
+                <Button size="small">{t('events.viewDetails')}</Button>
                 <Button size="small" color="primary">
-                  S'inscrire
+                  {t('events.register')}
                 </Button>
               </CardActions>
             </Card>
@@ -108,7 +110,7 @@ export const EventsPage = () => {
 
       {events.length === 0 && (
         <Typography variant="body1" color="text.secondary" textAlign="center" py={8}>
-          Aucun événement trouvé
+          {t('events.noEvents')}
         </Typography>
       )}
     </Box>

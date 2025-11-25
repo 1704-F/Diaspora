@@ -46,7 +46,10 @@ export const useTenantStore = create<TenantState>()(
         }
       },
 
-      setCurrentTenant: (tenant) => set({ currentTenant: tenant }),
+      setCurrentTenant: (tenant) => {
+        set({ currentTenant: tenant });
+        // Note: Roles are loaded automatically by App.tsx useEffect when currentTenant changes
+      },
 
       clearTenant: () => set({ currentTenant: null, tenants: [], error: null }),
     }),

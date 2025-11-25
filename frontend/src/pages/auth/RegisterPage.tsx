@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Container,
@@ -13,45 +14,56 @@ import {
   MenuItem,
 } from '@mui/material';
 import { useAuthStore } from '../../stores/auth.store';
-import toast from 'react-hot-toast';
 
 export const RegisterPage = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { register, isLoading, error, clearError } = useAuthStore();
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    confirmPassword: '',
     firstName: '',
     lastName: '',
+    email: '',
     phone: '',
-    language: 'fr',
+    password: '',
+    confirmPassword: '',
+    language: localStorage.getItem('selectedLanguage') || 'fr',
   });
+  const [passwordError, setPasswordError] = useState('');
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (field: string) => (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: e.target.value,
+    }));
+
+    if (field === 'confirmPassword' || field === 'password') {
+      setPasswordError('');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
+    setPasswordError('');
 
     if (formData.password !== formData.confirmPassword) {
-      toast.error('Les mots de passe ne correspondent pas');
+      setPasswordError(t('auth.confirmPassword'));
       return;
     }
 
     try {
       await register({
-        email: formData.email,
-        password: formData.password,
         firstName: formData.firstName,
         lastName: formData.lastName,
-        phone: formData.phone || undefined,
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
         language: formData.language,
       });
-
-      toast.success('Inscription réussie ! Vérifiez votre email.');
+      // Show success message and redirect to login
+      alert(t('auth.checkYourEmail'));
       navigate('/login');
     } catch (err) {
       // Error handled by store
@@ -59,7 +71,7 @@ export const RegisterPage = () => {
   };
 
   return (
-    <Container maxWidth="sm">
+    <Container maxWidth="md">
       <Box
         sx={{
           minHeight: '100vh',
@@ -74,118 +86,113 @@ export const RegisterPage = () => {
             🌍 Diaspora Platform
           </Typography>
           <Typography variant="h6" gutterBottom textAlign="center" color="text.secondary">
-            Créer un compte
+            {t('auth.register')}
           </Typography>
 
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert severity="error" sx={{ mb: 3 }}>
               {error}
             </Alert>
           )}
 
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+          {passwordError && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {passwordError}
+            </Alert>
+          )}
+
+          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  label="Prénom"
-                  name="firstName"
+                  label={t('auth.firstName')}
                   value={formData.firstName}
-                  onChange={handleChange}
+                  onChange={handleChange('firstName')}
                   required
+                  autoFocus
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  label="Nom"
-                  name="lastName"
+                  label={t('auth.lastName')}
                   value={formData.lastName}
-                  onChange={handleChange}
+                  onChange={handleChange('lastName')}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label={t('auth.email')}
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange('email')}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label={t('auth.phone')}
+                  value={formData.phone}
+                  onChange={handleChange('phone')}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  select
+                  label={t('onboarding.step1.language')}
+                  value={formData.language}
+                  onChange={handleChange('language')}
+                  required
+                >
+                  <MenuItem value="fr">{t('languages.fr')}</MenuItem>
+                  <MenuItem value="it">{t('languages.it')}</MenuItem>
+                </TextField>
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label={t('auth.password')}
+                  type="password"
+                  value={formData.password}
+                  onChange={handleChange('password')}
+                  required
+                  helperText="12+ caractères, majuscule, minuscule, chiffre, caractère spécial"
+                  inputProps={{ minLength: 12 }}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label={t('auth.confirmPassword')}
+                  type="password"
+                  value={formData.confirmPassword}
+                  onChange={handleChange('confirmPassword')}
                   required
                 />
               </Grid>
             </Grid>
-
-            <TextField
-              fullWidth
-              label="Email"
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              margin="normal"
-            />
-
-            <TextField
-              fullWidth
-              label="Téléphone (optionnel)"
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              margin="normal"
-            />
-
-            <TextField
-              select
-              fullWidth
-              label="Langue préférée"
-              name="language"
-              value={formData.language}
-              onChange={handleChange}
-              required
-              margin="normal"
-              helperText="Sélectionnez votre langue préférée pour l'interface"
-            >
-              <MenuItem value="fr">🇫🇷 Français</MenuItem>
-              <MenuItem value="en">🇬🇧 English</MenuItem>
-              <MenuItem value="ar">🇸🇦 العربية</MenuItem>
-              <MenuItem value="es">🇪🇸 Español</MenuItem>
-              <MenuItem value="pt">🇵🇹 Português</MenuItem>
-            </TextField>
-
-            <TextField
-              fullWidth
-              label="Mot de passe"
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              margin="normal"
-              helperText="Minimum 12 caractères avec majuscules, minuscules, chiffres et caractères spéciaux"
-            />
-
-            <TextField
-              fullWidth
-              label="Confirmer le mot de passe"
-              type="password"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              required
-              margin="normal"
-            />
 
             <Button
               type="submit"
               fullWidth
               variant="contained"
               size="large"
-              sx={{ mt: 3, mb: 2 }}
               disabled={isLoading}
+              sx={{ mt: 3, mb: 2 }}
             >
-              {isLoading ? <CircularProgress size={24} /> : "S'inscrire"}
+              {isLoading ? <CircularProgress size={24} /> : t('auth.signUp')}
             </Button>
 
-            <Box sx={{ textAlign: 'center' }}>
+            <Box sx={{ textAlign: 'center', mt: 2 }}>
               <Typography variant="body2">
-                Déjà un compte ?{' '}
-                <Link to="/login" style={{ textDecoration: 'none' }}>
-                  <Typography component="span" color="primary">
-                    Se connecter
-                  </Typography>
+                {t('auth.hasAccount')}{' '}
+                <Link to="/login" style={{ textDecoration: 'none', color: '#003D3D', fontWeight: 'bold' }}>
+                  {t('auth.signIn')}
                 </Link>
               </Typography>
             </Box>

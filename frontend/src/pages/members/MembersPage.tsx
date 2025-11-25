@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -26,18 +27,25 @@ import {
   FormControl,
   InputLabel,
 } from '@mui/material';
-import { Add, Edit, Delete, Visibility } from '@mui/icons-material';
+import { Add, Edit, Delete, Visibility, AdminPanelSettings } from '@mui/icons-material';
 import membersService from '../../services/members.service';
+import rolesService, { MemberRole } from '../../services/roles.service';
 import type { Member, MemberStatus } from '../../types';
 import toast from 'react-hot-toast';
+import { ManageRolesDialog } from '../../components/roles/ManageRolesDialog';
+import { RoleBadge } from '../../components/roles/RoleBadge';
 
 export const MembersPage = () => {
   const { tenantId } = useParams<{ tenantId: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
+  const [rolesDialogOpen, setRolesDialogOpen] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [memberRoles, setMemberRoles] = useState<{ [memberId: string]: MemberRole[] }>({});
   const [formData, setFormData] = useState({
     email: '',
     firstName: '',
@@ -65,8 +73,22 @@ export const MembersPage = () => {
       setLoading(true);
       const response = await membersService.getAll(tenantId, { page: 1, limit: 100 });
       setMembers(response.data);
+
+      // Load roles for each member
+      const rolesMap: { [memberId: string]: MemberRole[] } = {};
+      await Promise.all(
+        response.data.map(async (member) => {
+          try {
+            const roles = await rolesService.getMemberRoles(tenantId, member.id);
+            rolesMap[member.id] = roles;
+          } catch (err) {
+            rolesMap[member.id] = [];
+          }
+        })
+      );
+      setMemberRoles(rolesMap);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erreur de chargement');
+      setError(err.response?.data?.message || t('common.error'));
     } finally {
       setLoading(false);
     }
@@ -100,12 +122,24 @@ export const MembersPage = () => {
 
     try {
       await membersService.create(tenantId, formData);
-      toast.success('Membre ajouté avec succès');
+      toast.success(t('members.memberAdded') || 'Membre ajouté avec succès');
       handleCloseDialog();
       loadMembers();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Erreur lors de l\'ajout');
+      toast.error(err.response?.data?.message || t('common.error'));
     }
+  };
+
+  const handleOpenRolesDialog = (member: Member) => {
+    setSelectedMember(member);
+    setRolesDialogOpen(true);
+  };
+
+  const handleCloseRolesDialog = () => {
+    setRolesDialogOpen(false);
+    setSelectedMember(null);
+    // Reload members to refresh roles
+    loadMembers();
   };
 
   const handleDelete = async (id: string) => {
@@ -152,13 +186,13 @@ export const MembersPage = () => {
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Membres</Typography>
+        <Typography variant="h4">{t('members.title')}</Typography>
         <Button
           variant="contained"
           startIcon={<Add />}
           onClick={handleOpenDialog}
         >
-          Ajouter un membre
+          {t('members.addMember') || 'Ajouter un membre'}
         </Button>
       </Box>
 
@@ -166,21 +200,22 @@ export const MembersPage = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>N° Membre</TableCell>
-              <TableCell>Nom complet</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Téléphone</TableCell>
-              <TableCell>Statut</TableCell>
-              <TableCell>Date d'adhésion</TableCell>
-              <TableCell align="right">Actions</TableCell>
+              <TableCell>{t('members.memberNumber')}</TableCell>
+              <TableCell>{t('members.fullName')}</TableCell>
+              <TableCell>{t('members.email')}</TableCell>
+              <TableCell>{t('members.phone')}</TableCell>
+              <TableCell>{t('members.roles')}</TableCell>
+              <TableCell>{t('members.status')}</TableCell>
+              <TableCell>{t('members.membershipDate')}</TableCell>
+              <TableCell align="right">{t('common.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {members.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} align="center">
+                <TableCell colSpan={8} align="center">
                   <Typography color="text.secondary" py={4}>
-                    Aucun membre trouvé
+                    {t('members.noMembers')}
                   </Typography>
                 </TableCell>
               </TableRow>
@@ -194,6 +229,19 @@ export const MembersPage = () => {
                   <TableCell>{member.user.email}</TableCell>
                   <TableCell>{member.user.phone || '-'}</TableCell>
                   <TableCell>
+                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                      {memberRoles[member.id]?.length > 0 ? (
+                        memberRoles[member.id].map((memberRole) => (
+                          <RoleBadge key={memberRole.id} roleSlug={memberRole.role.slug} />
+                        ))
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">
+                          -
+                        </Typography>
+                      )}
+                    </Box>
+                  </TableCell>
+                  <TableCell>
                     <Chip
                       label={member.status}
                       color={getStatusColor(member.status)}
@@ -204,6 +252,14 @@ export const MembersPage = () => {
                     {new Date(member.membershipDate).toLocaleDateString('fr-FR')}
                   </TableCell>
                   <TableCell align="right">
+                    <IconButton
+                      size="small"
+                      color="primary"
+                      onClick={() => handleOpenRolesDialog(member)}
+                      title={t('members.manageRoles')}
+                    >
+                      <AdminPanelSettings />
+                    </IconButton>
                     <IconButton size="small" color="primary">
                       <Visibility />
                     </IconButton>
@@ -227,14 +283,14 @@ export const MembersPage = () => {
 
       {/* Add Member Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>Ajouter un membre</DialogTitle>
+        <DialogTitle>{t('members.addMember')}</DialogTitle>
         <DialogContent>
           <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  label="Prénom"
+                  label={t('members.firstName')}
                   name="firstName"
                   value={formData.firstName}
                   onChange={handleChange}
@@ -244,7 +300,7 @@ export const MembersPage = () => {
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  label="Nom"
+                  label={t('members.lastName')}
                   name="lastName"
                   value={formData.lastName}
                   onChange={handleChange}
@@ -254,7 +310,7 @@ export const MembersPage = () => {
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label="Email"
+                  label={t('members.email')}
                   type="email"
                   name="email"
                   value={formData.email}
@@ -265,7 +321,7 @@ export const MembersPage = () => {
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label="Téléphone"
+                  label={t('members.phone')}
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
@@ -274,7 +330,7 @@ export const MembersPage = () => {
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label="Adresse"
+                  label={t('members.address')}
                   name="address"
                   value={formData.address}
                   onChange={handleChange}
@@ -283,7 +339,7 @@ export const MembersPage = () => {
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  label="Ville"
+                  label={t('members.city')}
                   name="city"
                   value={formData.city}
                   onChange={handleChange}
@@ -292,7 +348,7 @@ export const MembersPage = () => {
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  label="Pays"
+                  label={t('members.country')}
                   name="country"
                   value={formData.country}
                   onChange={handleChange}
@@ -302,15 +358,26 @@ export const MembersPage = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog}>Annuler</Button>
+          <Button onClick={handleCloseDialog}>{t('common.cancel')}</Button>
           <Button
             variant="contained"
             onClick={handleSubmit}
           >
-            Ajouter
+            {t('common.add')}
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Manage Roles Dialog */}
+      {selectedMember && (
+        <ManageRolesDialog
+          open={rolesDialogOpen}
+          onClose={handleCloseRolesDialog}
+          memberId={selectedMember.id}
+          memberName={`${selectedMember.user.firstName} ${selectedMember.user.lastName}`}
+          tenantId={tenantId!}
+        />
+      )}
     </Box>
   );
 };
